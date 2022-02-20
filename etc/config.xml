@@ -17,6 +17,7 @@
                 <payment_action>authorize_capture</payment_action>
                 <title>CHEZ - Eficiência financeira em meios de pagamentos digitais</title>
                 <currency>BRL</currency>
+                <cctypes>AE,VI,MC,DI,JCB</cctypes>
                 <is_gateway>1</is_gateway>
                 <can_authorize>1</can_authorize>
                 <can_capture>1</can_capture>

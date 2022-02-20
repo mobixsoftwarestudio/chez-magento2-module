@@ -6,9 +6,24 @@
 /*global define*/
 define(
     [
-        'Magento_Checkout/js/view/payment/default'
+        'Magento_Payment/js/view/payment/cc-form',
+        'jquery',
+        'Magento_Checkout/js/model/full-screen-loader',
+        'uiRegistry',
+        'Magento_Ui/js/model/messageList',
+        'Magento_Checkout/js/model/quote',
+        'Magento_Checkout/js/model/payment/additional-validators',
+        'Magento_Payment/js/model/credit-card-validation/validator',
+
     ],
-    function (Component) {
+    function (
+        Component,
+        $,
+        fullScreenLoader,
+        uiRegistry,
+        globalMessageList,
+        quote
+    ) {
         'use strict';
 
         return Component.extend({
@@ -21,9 +36,32 @@ define(
 
                 this._super()
                     .observe([
-                        'transactionResult'
+                        'transactionResult',
+                        'creditCardOwnerName',
+                        'creditCardOwnerBirthDay',
+                        'creditCardOwnerBirthMonth',
+                        'creditCardOwnerBirthYear',
+                        'creditCardOwnerCpf',
+                        'creditCardInstallments',
+                        'disablePlaceOrderButton'
+
                     ]);
                 return this;
+            },
+
+            initialize: function () {
+                this._super();
+
+                uiRegistry.get(this.name + '.' + this.name + '.messages', (function (component) {
+                    component.hideTimeout = 12000;
+                }));
+
+                this.grandTotal = quote.totals().grand_total;
+
+            },
+
+            isActive: function () {
+                return true;
             },
 
             getCode: function () {
@@ -37,6 +75,11 @@ define(
                         'transaction_result': this.transactionResult()
                     }
                 };
+            },
+
+            validate: function () {
+                var $form = $('#' + this.getCode() + '-form');
+                return $form.validation() && $form.validation('isValid');
             },
 
             getTransactionResults: function () {

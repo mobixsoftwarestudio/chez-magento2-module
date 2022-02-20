@@ -20,4 +20,13 @@
             </argument>
         </arguments>
     </type>
+
+    <type name="Magento\Payment\Model\CcGenericConfigProvider">
+        <arguments>
+            <argument name="methodCodes" xsi:type="array">
+                <item name="chargeanywhere" xsi:type="const">Chez\Payments\Model\Payment::CODE</item>
+            </argument>
+        </arguments>
+    </type>
+
 </config>
