@@ -1,0 +1,143 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright © 2016 Magento. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+-->
+
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <!-- Payment Method Facade configuration -->
+    <virtualType name="ChezPaymentsFacade" type="Magento\Payment\Model\Method\Adapter">
+        <arguments>
+            <argument name="code" xsi:type="const">\Chez\Payments\Model\Ui\ConfigProvider::CODE</argument>
+            <argument name="formBlockType" xsi:type="string">Magento\Payment\Block\Form</argument>
+            <argument name="infoBlockType" xsi:type="string">Chez\Payments\Block\Info</argument>
+            <argument name="valueHandlerPool" xsi:type="object">ChezPaymentsValueHandlerPool</argument>
+            <argument name="commandPool" xsi:type="object">ChezPaymentsCommandPool</argument>
+        </arguments>
+    </virtualType>
+
+    <!-- Configuration reader -->
+    <virtualType name="ChezPaymentsConfig" type="Magento\Payment\Gateway\Config\Config">
+        <arguments>
+            <argument name="methodCode" xsi:type="const">\Chez\Payments\Model\Ui\ConfigProvider::CODE</argument>
+        </arguments>
+    </virtualType>
+
+    <!-- Logger, initialized with ChezPaymentsConfig -->
+    <virtualType name="ChezPaymentsLogger" type="Magento\Payment\Model\Method\Logger">
+        <arguments>
+            <argument name="config" xsi:type="object">ChezPaymentsConfig</argument>
+        </arguments>
+    </virtualType>
+
+    <type name="Chez\Payments\Gateway\Http\Client\ClientMock">
+        <arguments>
+            <argument name="logger" xsi:type="object">ChezPaymentsLogger</argument>
+        </arguments>
+    </type>
+
+    <!-- Commands infrastructure -->
+    <virtualType name="ChezPaymentsCommandPool" type="Magento\Payment\Gateway\Command\CommandPool">
+        <arguments>
+            <argument name="commands" xsi:type="array">
+                <item name="authorize" xsi:type="string">ChezPaymentsAuthorizeCommand</item>
+                <item name="capture" xsi:type="string">ChezPaymentsCaptureCommand</item>
+                <item name="void" xsi:type="string">ChezPaymentsVoidCommand</item>
+            </argument>
+        </arguments>
+    </virtualType>
+
+    <!-- Authorize command -->
+    <virtualType name="ChezPaymentsAuthorizeCommand" type="Magento\Payment\Gateway\Command\GatewayCommand">
+        <arguments>
+            <argument name="requestBuilder" xsi:type="object">ChezPaymentsAuthorizationRequest</argument>
+            <argument name="handler" xsi:type="object">ChezPaymentsResponseHandlerComposite</argument>
+            <argument name="transferFactory" xsi:type="object">Chez\Payments\Gateway\Http\TransferFactory</argument>
+            <argument name="client" xsi:type="object">Chez\Payments\Gateway\Http\Client\ClientMock</argument>
+        </arguments>
+    </virtualType>
+
+    <!-- Authorization Request -->
+    <virtualType name="ChezPaymentsAuthorizationRequest" type="Magento\Payment\Gateway\Request\BuilderComposite">
+        <arguments>
+            <argument name="builders" xsi:type="array">
+                <item name="transaction" xsi:type="string">Chez\Payments\Gateway\Request\AuthorizationRequest</item>
+                <item name="mockData" xsi:type="string">Chez\Payments\Gateway\Request\MockDataRequest</item>
+            </argument>
+        </arguments>
+    </virtualType>
+    <type name="Chez\Payments\Gateway\Request\AuthorizationRequest">
+        <arguments>
+            <argument name="config" xsi:type="object">ChezPaymentsConfig</argument>
+        </arguments>
+    </type>
+
+    <!-- Capture command -->
+    <virtualType name="ChezPaymentsCaptureCommand" type="Magento\Payment\Gateway\Command\GatewayCommand">
+        <arguments>
+            <argument name="requestBuilder" xsi:type="object">Chez\Payments\Gateway\Request\CaptureRequest</argument>
+            <argument name="handler" xsi:type="object">Chez\Payments\Gateway\Response\TxnIdHandler</argument>
+            <argument name="transferFactory" xsi:type="object">Chez\Payments\Gateway\Http\TransferFactory</argument>
+            <argument name="validator" xsi:type="object">Chez\Payments\Gateway\Validator\ResponseCodeValidator</argument>
+            <argument name="client" xsi:type="object">Chez\Payments\Gateway\Http\Client\ClientMock</argument>
+        </arguments>
+    </virtualType>
+
+    <!-- Capture Request -->
+    <type name="Chez\Payments\Gateway\Request\CaptureRequest">
+        <arguments>
+            <argument name="config" xsi:type="object">ChezPaymentsConfig</argument>
+        </arguments>
+    </type>
+
+    <!-- Void command -->
+    <virtualType name="ChezPaymentsVoidCommand" type="Magento\Payment\Gateway\Command\GatewayCommand">
+        <arguments>
+            <argument name="requestBuilder" xsi:type="object">Chez\Payments\Gateway\Request\VoidRequest</argument>
+            <argument name="handler" xsi:type="object">Chez\Payments\Gateway\Response\TxnIdHandler</argument>
+            <argument name="transferFactory" xsi:type="object">Chez\Payments\Gateway\Http\TransferFactory</argument>
+            <argument name="validator" xsi:type="object">Chez\Payments\Gateway\Validator\ResponseCodeValidator</argument>
+            <argument name="client" xsi:type="object">Chez\Payments\Gateway\Http\Client\ClientMock</argument>
+        </arguments>
+    </virtualType>
+
+    <!-- Void Request -->
+    <type name="Chez\Payments\Gateway\Request\VoidRequest">
+        <arguments>
+            <argument name="config" xsi:type="object">ChezPaymentsConfig</argument>
+        </arguments>
+    </type>
+
+    <!-- Response handlers -->
+    <virtualType name="ChezPaymentsResponseHandlerComposite" type="Magento\Payment\Gateway\Response\HandlerChain">
+        <arguments>
+            <argument name="handlers" xsi:type="array">
+                <item name="txnid" xsi:type="string">Chez\Payments\Gateway\Response\TxnIdHandler</item>
+                <item name="fraud" xsi:type="string">Chez\Payments\Gateway\Response\FraudHandler</item>
+            </argument>
+        </arguments>
+    </virtualType>
+
+    <!-- Value handlers infrastructure -->
+    <virtualType name="ChezPaymentsValueHandlerPool" type="Magento\Payment\Gateway\Config\ValueHandlerPool">
+        <arguments>
+            <argument name="handlers" xsi:type="array">
+                <item name="default" xsi:type="string">ChezPaymentsConfigValueHandler</item>
+            </argument>
+        </arguments>
+    </virtualType>
+    <virtualType name="ChezPaymentsConfigValueHandler" type="Magento\Payment\Gateway\Config\ConfigValueHandler">
+        <arguments>
+            <argument name="configInterface" xsi:type="object">ChezPaymentsConfig</argument>
+        </arguments>
+    </virtualType>
+
+    <type name="Chez\Payments\Block\Info">
+        <arguments>
+            <argument name="config" xsi:type="object">ChezPaymentsConfig</argument>
+        </arguments>
+    </type>
+
+</config>
