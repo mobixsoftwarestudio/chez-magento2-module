@@ -20,7 +20,7 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
 {
 
     const XML_PATH_PAYMENT_PAGSEGURO_EMAIL              = 'payment/rm_pagseguro/merchant_email';
-    const XML_PATH_PAYMENT_PAGSEGURO_TOKEN              = 'payment/rm_pagseguro/token';
+    const XML_PATH_PAYMENT_TOKEN              = 'payment/chez_payments/api_token';
     const XML_PATH_PAYMENT_PAGSEGURO_DEBUG              = 'payment/rm_pagseguro/debug';
     const XML_PATH_PAUMENT_PAGSEGURO_SANDBOX            = 'payment/rm_pagseguro/sandbox';
     const XML_PATH_PAYMENT_PAGSEGURO_SANDBOX_EMAIL      = 'payment/rm_pagseguro/sandbox_merchant_email';
@@ -111,7 +111,7 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
         \Magento\Checkout\Model\Session $checkoutSession,
         \Magento\Customer\Model\Customer $customer,
         \Magento\Framework\App\Helper\Context $context,
-        \RicardoMartins\PagSeguro\Helper\Logger $loggerHelper,
+        \Chez\Payments\Helper\Logger $loggerHelper,
         \Magento\Framework\App\ProductMetadataInterface $productMetadata,
         \Magento\Framework\Module\ModuleListInterface $moduleList,
         \Magento\Framework\HTTP\Client\Curl $curl,
@@ -276,9 +276,7 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
      */
     public function getToken()
     {
-        if (!$this->isSandbox()) {
-            $token = $this->scopeConfig->getValue(self::XML_PATH_PAYMENT_PAGSEGURO_TOKEN, ScopeInterface::SCOPE_WEBSITE);
-        }
+        $token = $this->scopeConfig->getValue(self::XML_PATH_PAYMENT_TOKEN, ScopeInterface::SCOPE_WEBSITE);
 
         if (empty($token)) {
             return false;
