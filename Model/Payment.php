@@ -9,12 +9,13 @@ namespace Chez\Payments\Model;
 
 use Magento\Framework\Simplexml\Element;
 use Magento\Sales\Model\Order\Payment\Transaction;
-
+use Magento\Payment\Model\Method\Adapter;
+use Magento\Payment\Model\Method\Cc;
 
 /**
  * Pay In Store payment method model
  */
-class Payment extends \Magento\Payment\Model\Method\Cc
+class Payment extends Adapter
 {
     const CODE = 'chez_payments';
     protected $_code = self::CODE;
@@ -36,12 +37,15 @@ class Payment extends \Magento\Payment\Model\Method\Cc
         \Magento\Directory\Model\CountryFactory $countryFactory,
         \Magento\Checkout\Model\Cart $cart,
         \Chez\Payments\Helper\Logger $loggerHelper,
+        \Chez\Payments\Helper\Data $chezHelper,
         array $data = array()
     ) {
         parent::__construct($context, $registry, $extensionFactory, $customAttributeFactory, $paymentData, $scopeConfig, $logger, $moduleList, $localeDate, null, null, $data);
         $this->cart = $cart;
         $this->_countryFactory = $countryFactory;
         $this->_logHelper  = $loggerHelper;
+        $this->_helper = $chezHelper;
+        $this->_helper->writeLog('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx');
     }
     public function capture(\Magento\Payment\Model\InfoInterface $payment, $amount)
     {
