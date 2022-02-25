@@ -35,23 +35,30 @@ class Payment extends \Magento\Payment\Model\Method\Cc
         \Magento\Framework\Stdlib\DateTime\TimezoneInterface $localeDate,
         \Magento\Directory\Model\CountryFactory $countryFactory,
         \Magento\Checkout\Model\Cart $cart,
+        \Chez\Payments\Helper\Logger $loggerHelper,
         array $data = array()
     ) {
         parent::__construct($context, $registry, $extensionFactory, $customAttributeFactory, $paymentData, $scopeConfig, $logger, $moduleList, $localeDate, null, null, $data);
         $this->cart = $cart;
         $this->_countryFactory = $countryFactory;
+        $this->_logHelper  = $loggerHelper;
     }
     public function capture(\Magento\Payment\Model\InfoInterface $payment, $amount)
     {
         try {
-            //check if payment has not been authorized then authorize it      if(is_null($payment->getParentTransactionId()))
-            {
+            $this->_logHelper->writeLog('---------capure');
+            $this->_logHelper->writeLog($payment);
+            //check if payment has not been authorized then authorize it
+            if (is_null($payment->getParentTransactionId())) {
+
                 $this->authorize($payment, $amount);
             }
             //build array of all necessary details to pass to your Payment Gateway..
-            $request = ['CardCVV2' => $payment->getCcCid(), ‘CardNumber’ => $payment->getCcNumber(), ‘CardExpiryDate’ => $this->getCardExpiryDate($payment), ‘Amount’ => $amount, ‘Currency’ => $this->cart->getQuote()->getBaseCurrencyCode(),];
-            //make API request to credit card processor. $response = $this->captureRequest($request);
-            //Handle Response accordingly. //transaction is completed.
+            $request = ['CardCVV2' => $payment->getCcCid(), 'CardNumber' => $payment->getCcNumber(), 'CardExpiryDate' => $this->getCardExpiryDate($payment), 'Amount' => $amount, 'Currency' => $this->cart->getQuote()->getBaseCurrencyCode(),];
+            //make API request to credit card processor.
+            $response = $this->captureRequest($request);
+            //Handle Response accordingly.
+            //transaction is completed.
             $payment->setTransactionId($response['tid'])->setIsTransactionClosed(0);
         } catch (\Exception $e) {
             $this->debug($payment->getData(), $e->getMessage());
@@ -61,8 +68,11 @@ class Payment extends \Magento\Payment\Model\Method\Cc
     public function authorize(\Magento\Payment\Model\InfoInterface $payment, $amount)
     {
         try {
+            $this->_logHelper->writeLog('---------authorize');
+            $this->_logHelper->writeLog($payment);
+
             //build array of all necessary details to pass to your Payment Gateway..
-            $request = ['CardCVV2' => $payment->getCcCid(), ‘CardNumber’ => $payment->getCcNumber(), ‘CardExpiryDate’ => $this->getCardExpiryDate($payment), ‘Amount’ => $amount, ‘Currency’ => $this->cart->getQuote()->getBaseCurrencyCode(),];
+            $request = ['CardCVV2' => $payment->getCcCid(), 'CardNumber' => $payment->getCcNumber(), 'CardExpiryDate' => $this->getCardExpiryDate($payment), 'Amount' => $amount, 'Currency' => $this->cart->getQuote()->getBaseCurrencyCode(),];
             //check if payment has been authorized
             $response = $this->authRequest($request);
         } catch (\Exception $e) {
@@ -80,10 +90,15 @@ class Payment extends \Magento\Payment\Model\Method\Cc
     /*This function is defined to set the Payment Action Type that is - - Authorize - Authorize and Capture Whatever has been set under Configuration of this Payment Method in Admin Panel, that will be fetched and set for this Payment Method by passing that into getConfigPaymentAction() function. */
     public function getConfigPaymentAction()
     {
+        $this->_logHelper->writeLog('---------getConfigPayment');
+
+
         return $this->getConfigData('payment_action');
     }
     public function authRequest($request)
     {
+        $this->_logHelper->writeLog('--------- auth request');
+
         //Process Request and receive the response from Payment Gateway---
         $response = ['tid' => rand(100000, 99999999)];
         //Here, check response and process accordingly---
@@ -101,7 +116,10 @@ class Payment extends \Magento\Payment\Model\Method\Cc
      */
     public function captureRequest($request)
     {
-        //Process Request and receive the response from Payment Gateway---                    $response = ['tid' => rand(100000, 99999999)];
+        //Process Request and receive the response from Payment Gateway---
+        $this->_logHelper->writeLog('--------- capure request');
+
+        $response = ['tid' => rand(100000, 99999999)];
         //Here, check response and process accordingly---
         if (!$response) {
             throw new \Magento\Framework\Exception\LocalizedException(__('Failed capture request.'));

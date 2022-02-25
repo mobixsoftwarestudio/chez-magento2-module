@@ -54,6 +54,7 @@
 "Year","Ano"
 "Card Verification Number","Código de Segurança"
 "Installments","Parcelas"
+"Select the number of installments","Selecione a quantidade de parcelas"
 "Enables debug mode for log requests/responses.","Habilita log nativo para requisições/respostas."
 "Credit Card Information","Informações do Cartão"
 "Payment refunding error.","Erro ao fazer reembolso."

@@ -28,26 +28,26 @@
         <form class="form" data-bind="attr: {'id': getCode() + '-form'}">
             <!-- ko template: 'Magento_Payment/payment/cc-form' -->
             <!-- /ko -->
-        </form>
 
-        <div class="field required">
-            <label data-bind="attr: {for: getCode() + '_transaction_result'}" class="label">
-                <span>
-                    <!-- ko i18n: 'Transaction Result'-->
-                    <!-- /ko --></span>
-            </label>
 
-            <div class="control">
-                <select name="payment[transaction_result]" class="select" data-bind="
-                                  options: getTransactionResults(),
+            <div class="field required">
+                <label data-bind="attr: {for: getCode() + '_installments'}" class="label">
+                    <span>
+                        <!-- ko i18n: 'Select the number of installments'-->
+                        <!-- /ko --></span>
+                </label>
+
+                <div class="control">
+                    <select style="width: 220px;" name="payment[installment]" class="select" data-bind="
+                                  options: getInstallments(),
                                   optionsValue: 'value',
-                                  optionsText: 'transaction_result',
-                                  optionsCaption: $t('Transaction Result'),
+                                  optionsText: 'installment',
                                   value: transactionResult">
-                </select>
+                    </select>
+                </div>
             </div>
-        </div>
-
+        </form>
+        <br />
         <div class="actions-toolbar">
             <div class="primary">
                 <button class="action primary checkout" type="submit" data-bind="

@@ -12,6 +12,10 @@ use Magento\Payment\Observer\AbstractDataAssignObserver;
 
 class DataAssignObserver extends AbstractDataAssignObserver
 {
+    public function __construct(\Chez\Payments\Helper\Logger $loggerHelper)
+    {
+        $this->_logHelper  = $loggerHelper;
+    }
     /**
      * @param Observer $observer
      * @return void
@@ -20,14 +24,15 @@ class DataAssignObserver extends AbstractDataAssignObserver
     {
         $method = $this->readMethodArgument($observer);
         $data = $this->readDataArgument($observer);
-
-        $paymentInfo = $method->getInfoInstance();
-
-        if ($data->getDataByKey('transaction_result') !== null) {
+        //$paymentInfo = $method->getInfoInstance();
+        $paymentInfo = $this->readPaymentModelArgument($observer);
+        if ($data->getDataByKey('installment') !== null) {
             $paymentInfo->setAdditionalInformation(
-                'transaction_result',
-                $data->getDataByKey('transaction_result')
+                'installment',
+                $data->getDataByKey('installment')
             );
+        } else {
+            $this->_logHelper->writeLog('Empty installment');
         }
     }
 }

@@ -15,9 +15,8 @@ class Logger extends \Magento\Framework\App\Helper\AbstractHelper
 {
     protected $customLogger;
 
-    public function __construct(
-        \Psr\Log\LoggerInterface $customLogger
-    ) {
+    public function __construct(\Psr\Log\LoggerInterface $customLogger)
+    {
 
         $this->customLogger = $customLogger;
     }

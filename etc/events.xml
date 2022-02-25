@@ -10,4 +10,10 @@
     <event name="payment_method_assign_data">
         <observer name="sample_payment_gateway_data_assign" instance="Chez\Payments\Observer\DataAssignObserver" />
     </event>
+    <event name="sales_quote_collect_totals_before">
+        <observer name="chez_payments_sales_quote_collect_totals_before" instance="Chez\Payments\Observer\QuoteObserver"/>
+    </event>
+    <event name="payment_method_is_active">
+        <observer name="chez_payments_method_active" instance="Chez\Payments\Observer\PaymentMethodActiveObserver" />
+    </event>
 </config>

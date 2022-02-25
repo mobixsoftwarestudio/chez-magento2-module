@@ -7,6 +7,7 @@ use Magento\Framework\Phrase;
 use Magento\Store\Model\ScopeInterface;
 use Magento\Sales\Model\Order\Email\Sender\OrderCommentSender;
 use Magento\Framework\HTTP\ClientInterface;
+use stdClass;
 
 /**
  * Class Data Helper
@@ -19,9 +20,11 @@ use Magento\Framework\HTTP\ClientInterface;
 class Data extends \Magento\Framework\App\Helper\AbstractHelper
 {
 
-    const XML_PATH_PAYMENT_PAGSEGURO_EMAIL              = 'payment/rm_pagseguro/merchant_email';
-    const XML_PATH_PAYMENT_TOKEN              = 'payment/chez_payments/api_token';
-    const XML_PATH_PAYMENT_PAGSEGURO_DEBUG              = 'payment/rm_pagseguro/debug';
+    const API_HOST                                      = 'http://172.17.0.1:4000';
+    const API_URL_GET_INSTALLMENTS                      = '/pipeline/integration/installment_politic/simulation';
+    const XML_PATH_PAYMENT_TOKEN                        = 'payment/chez_payments/api_token';
+    const XML_PATH_PAYMENT_DEBUG                        = 'payment/chez_payments/debug';
+
     const XML_PATH_PAUMENT_PAGSEGURO_SANDBOX            = 'payment/rm_pagseguro/sandbox';
     const XML_PATH_PAYMENT_PAGSEGURO_SANDBOX_EMAIL      = 'payment/rm_pagseguro/sandbox_merchant_email';
     const XML_PATH_PAYMENT_PAGSEGURO_SANDBOX_KEY      = 'payment/rm_pagseguro/sandbox_key';
@@ -91,6 +94,8 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
      */
     protected $httpClient;
 
+    protected $messageManager;
+
     /**
      * @param \Magento\Store\Model\StoreManagerInterface        $storeManager
      * @param \Magento\Checkout\Model\Session                   $checkoutSession
@@ -107,6 +112,7 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
      */
 
     public function __construct(
+        \Magento\Framework\Message\ManagerInterface $messageManager,
         \Magento\Store\Model\StoreManagerInterface $storeManager,
         \Magento\Checkout\Model\Session $checkoutSession,
         \Magento\Customer\Model\Customer $customer,
@@ -121,6 +127,7 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
         OrderCommentSender $orderCommentSender,
         ClientInterface $httpClient
     ) {
+        $this->messageManager = $messageManager;
         $this->storeManager = $storeManager;
         $this->checkoutSession = $checkoutSession;
         $this->customerRepo = $customer;
@@ -134,6 +141,57 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
         $this->transactionRepository = $transactionRepository;
         $this->httpClient = $httpClient;
         parent::__construct($context);
+    }
+
+    /**
+     * Get installments from Pipeline
+     * @param number
+     * @return bool|string
+     */
+    public function getInstallments($value)
+    {
+        $params = new stdClass();
+        $params->value = round($value, 2);
+        $params->api_token = $this->getToken();
+        $params->vendorPortionLimit = 4;
+        $params->vendorPortionFee = 1;
+        $params->customerPortionFee = 2;
+        $params->subaccount_id = '61730e854865ea00203d1576';
+
+        $this->writeLog('Parameters being sent to API URL (' . self::API_URL_GET_INSTALLMENTS . '): ' . var_export($params, true));
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, self::API_HOST . self::API_URL_GET_INSTALLMENTS);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($params));
+        curl_setopt($ch, CURLOPT_TIMEOUT, 45);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $this->getHeaders());
+
+        try {
+            $response = curl_exec($ch);
+
+            if (curl_error($ch)) {
+                $this->writeLog('-----Curl error response----: ' . var_export(curl_error($ch), true));
+                throw new \Magento\Framework\Validator\Exception(new \Magento\Framework\Phrase(curl_error($ch)));
+            }
+
+            curl_close($ch);
+
+            $this->writeLog('Retorno Chez (/' . self::API_URL_GET_INSTALLMENTS . '): ' . var_export($response, true));
+
+            return json_encode(
+                array('success' => json_decode($response))
+            );
+        } catch (\Exception $e) {
+            $this->messageManager->addErrorMessage(__('Communication failure with Chez API'), 'Error');
+            $this->writeLog('Communication failure with Chez API: ' . $e->getMessage());
+            return json_encode(
+                array('error' => 'Communication failure with Chez API (' . $e->getMessage() . ')')
+            );
+        }
     }
 
     /**
@@ -230,7 +288,7 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
      */
     public function isDebugActive()
     {
-        return $this->scopeConfig->getValue(self::XML_PATH_PAYMENT_PAGSEGURO_DEBUG, ScopeInterface::SCOPE_WEBSITE);
+        return $this->scopeConfig->getValue(self::XML_PATH_PAYMENT_DEBUG, ScopeInterface::SCOPE_WEBSITE);
     }
 
     /**
@@ -370,22 +428,6 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
         return false;
     }
 
-    /**
-     * Get cc installment from session
-     * @param string
-     * @return bool|string
-     */
-    public function getInstallments($param)
-    {
-        $ccinstallment = $this->checkoutSession->getData('installment');
-        $ccinstallment = $this->serializer->unserialize($ccinstallment);
-
-        if (isset($ccinstallment[$param])) {
-            return $ccinstallment[$param];
-        }
-
-        return false;
-    }
 
     /**
      * Check if CPF should be visible with other payment fields
@@ -448,124 +490,7 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
         return $installmentsQty;
     }
 
-    /**
-     * Call PagSeguro API to place an order (/transactions)
-     * @param $params
-     * @param $payment
-     * @param $type
-     *
-     * @return SimpleXMLElement
-     */
-    public function callApi($params, $payment, $type = 'transactions')
-    {
-        $params['public_key'] = $this->getPagSeguroPubKey();
-        if ($this->isSandbox()) {
-            $params['isSandbox'] = true;
-        }
-        $params = $this->convertEncoding($params);
-        $paramsObj = new \Magento\Framework\DataObject(['params' => $params]);
 
-        $params = $paramsObj->getParams();
-        $paramsString = $this->convertToCURLString($params);
-
-        $this->writeLog('Parameters being sent to API (/v2/' . $type . '): ' . var_export($params, true));
-
-        //@TODO Remove curl
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $this->getWsUrl($type));
-        curl_setopt($ch, CURLOPT_POST, count($params));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $paramsString);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 45);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $this->getHeaders());
-
-        try {
-            $response = curl_exec($ch);
-        } catch (\Exception $e) {
-            throw new \Magento\Framework\Validator\Exception(
-                'Communication failure with Pagseguro (' . $e->getMessage() . ')'
-            );
-        }
-
-        //@TODO Remove curl
-        if (curl_error($ch)) {
-            //@TODO Remove curl
-            $this->writeLog('-----Curl error response----: ' . var_export(curl_error($ch), true));
-            throw new \Magento\Framework\Validator\Exception(curl_error($ch));
-        }
-        //@TODO Remove curl
-        curl_close($ch);
-
-        $this->writeLog('Retorno PagSeguro (/' . $type . '): ' . var_export($response, true));
-        libxml_use_internal_errors(true);
-        $xml = \simplexml_load_string(trim($response));
-
-        if (false !== $xml && $xml->error->code) {
-            if ($type !== "transactions/refunds" && $xml->error->code != '14007') {
-                $errArray = [];
-                $xmlError = json_decode(json_encode($xml), true);
-                $xmlError = $xmlError['error'];
-
-                if (isset($xmlError['code'])) {
-                    $errArray[] = $this->translateError($xmlError['message']);
-                } else {
-                    foreach ($xmlError as $xmlErr) {
-                        $errArray[] = $this->translateError($xmlErr['message']);
-                    }
-                }
-
-                $errArray = implode(" / ", $errArray);
-                if ($errArray) {
-                    throw new \Magento\Framework\Validator\Exception(new Phrase($errArray));
-                }
-
-                $this->setSessionVl($errArray);
-            }
-        }
-
-        if (false === $xml) {
-            $errMsg = 'There was a problem processing your request / payment. Please contact us.';
-            switch ($response) {
-                case 'Unauthorized':
-                    $this->writeLog(
-                        'Token / email não autorizado no PagSeguro. Verifique as configurações do módulo.'
-                    );
-                    break;
-                case 'Forbidden':
-                    $this->writeLog(
-                        'Acesso não autorizado à API do PagSeguro. Veja se você tem permissão '
-                            . 'e se a chave usada pertence à esta conta. Retorno do PagSeguro: '
-                            . var_export($response, true)
-                    );
-                    break;
-                case 'Public_key missing.':
-                    $this->writeLog(
-                        'Configure corretamente o campo Chave Pública do módulo PagSeguro. '
-                            . 'Obtenha uma chave em https://pagseguro.ricardomartins.net.br/magento2/wizard.html.'
-                    );
-                    $errMsg = 'Public Key has not been defined in the module configuration.';
-                    break;
-                case stripos($response, 'chave publica inválida') !== false:
-                    $this->writeLog(
-                        'Chave Pública inválida. Se necessário reautentique a aplicação. '
-                            . 'Autorize em https://pagseguro.ricardomartins.net.br/magento2/wizard.html.'
-                    );
-                    $errMsg = 'Invalid PagSeguro Public Key';
-                    break;
-                default:
-                    $this->writeLog('Retorno inesperado do PagSeguro: ' . $response);
-                    $errMsg = 'There was a problem with PagSeguro communication. Could you try again?';
-                    $errMsg .= $this->isSandbox() ? 'Note that you are using sandbox. It is very likely to be a temporary problem.' : '';
-            }
-            throw new \Magento\Framework\Validator\Exception(
-                new Phrase($errMsg)
-            );
-        }
-
-        return $xml;
-    }
 
     /**
      * Convert array values to utf-8
@@ -1324,9 +1249,13 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
      */
     public function getHeaders()
     {
-        $moduleVersion = $this->moduleList->getOne('RicardoMartins_PagSeguro')['setup_version'];
-        $headers = ['Platform: Magento', 'Platform-Version: '
-            . $this->getMagentoVersion(), 'Module-Version: ' . $moduleVersion];
+        $headers = [
+            'Platform: Magento',
+            'Content-Type: application/json',
+            //'Accept: application/json',
+            'Platform-Version: ' . $this->getMagentoVersion(),
+            'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2MWU5NjhiOGQ3MTEzYzAwMjA2OWJkMDEiLCJwZXJtaXNzaW9ucyI6W10sImlhdCI6MTY0NTc4NjU4MCwiZXhwIjoxNjQ1ODAwOTgwLCJhdWQiOiJtb2JpeHRlYy5jb20iLCJpc3MiOiJhY2NvdW50cy5tb2JpeHRlYy5jb20ifQ.J1Xxey-A1i4VnNf7hMUk5bWhfj5y5tqdLksgiXN_fGo'
+        ];
 
         return $headers;
     }

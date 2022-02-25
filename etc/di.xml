@@ -26,17 +26,45 @@
     </virtualType>
 
     <!-- Logger, initialized with ChezPaymentsConfig -->
-    <virtualType name="ChezPaymentsLogger" type="Magento\Payment\Model\Method\Logger">
+    <virtualType name="ChezPaymentsLogger" type="Magento\Framework\Logger\Monolog">
         <arguments>
-            <argument name="config" xsi:type="object">ChezPaymentsConfig</argument>
+            <argument name="handlers" xsi:type="array">
+                <item name="debug" xsi:type="object">Chez\Payments\Logger\Handler\Custom</item>
+            </argument>
         </arguments>
     </virtualType>
 
-    <type name="Chez\Payments\Gateway\Http\Client\ClientMock">
+    <type name="Chez\Payments\Helper\Logger">
         <arguments>
-            <argument name="logger" xsi:type="object">ChezPaymentsLogger</argument>
+            <argument name="customLogger" xsi:type="object">ChezPaymentsLogger</argument>
         </arguments>
     </type>
+
+    <type name="Chez\Payments\Observer\DataAssignObserver">
+        <arguments>
+            <argument name="loggerHelper" xsi:type="object">\Chez\Payments\Helper\Logger</argument>
+        </arguments>
+    </type>
+
+    <type name="Chez\Payments\Observer\QuoteObserver">
+        <arguments>
+            <argument name="loggerHelper" xsi:type="object">\Chez\Payments\Helper\Logger</argument>
+        </arguments>
+    </type>
+
+    <type name="Chez\Payments\Observer\PaymentMethodActiveObserver">
+        <arguments>
+            <argument name="loggerHelper" xsi:type="object">\Chez\Payments\Helper\Logger</argument>
+        </arguments>
+    </type>
+
+    <type name="Chez\Payments\Model\Payment">
+        <arguments>
+            <argument name="loggerHelper" xsi:type="object">\Chez\Payments\Helper\Logger</argument>
+        </arguments>
+    </type>
+
+    <preference for="Chez\Payments\Api\ServiceInterface" type="Chez\Payments\Api\Service" />
 
     <!-- Commands infrastructure -->
     <virtualType name="ChezPaymentsCommandPool" type="Magento\Payment\Gateway\Command\CommandPool">
