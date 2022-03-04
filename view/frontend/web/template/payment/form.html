@@ -35,16 +35,17 @@
 
             <fieldset
                 data-bind="attr: {class: 'fieldset payment items ccard ' + getCode(), id: 'payment_form_' + getCode()}">
-                <!-- ko if: (isShowLegend())-->
+
                 <legend class="legend">
                     <span>
-                        <!-- ko i18n: 'Credit Card Information'-->
-                        <!-- /ko --></span>
-                </legend><br />
-                <!-- /ko -->
+                        Informações do cartão de crédito
+                    </span>
+                </legend>
+                <br />
+
                 <div class="field type">
                     <div class="control">
-                        <ul class="credit-card-types">
+                        <ul class="credit-card-types" data-bind="visible: showCreditCardIcons">
                             <!-- ko foreach: {data: getCcAvailableTypesValues(), as: 'item'} -->
                             <li class="item" data-bind="css: {
                                                  _active: $parent.selectedCardType() == item.value,
@@ -52,11 +53,11 @@
                                                  } ">
                                 <!--ko if: $parent.getIcons(item.value) -->
                                 <img data-bind="attr: {
-                        'src': $parent.getIcons(item.value).url,
-                        'alt': item.type,
-                        'width': $parent.getIcons(item.value).width,
-                        'height': $parent.getIcons(item.value).height
-                        }">
+                                            'src': $parent.getIcons(item.value).url,
+                                            'alt': item.type,
+                                            'width': $parent.getIcons(item.value).width,
+                                            'height': $parent.getIcons(item.value).height
+                                            }">
                                 <!--/ko-->
                             </li>
                             <!--/ko-->
@@ -147,6 +148,84 @@
                         </div>
                     </div>
                 </div>
+                <div class="field number required">
+                    <label data-bind="attr: {for: getCode() + '_cc_owner'}" class="label">
+                        <span>
+                            <!-- ko i18n: 'Credit Card Owner Name'-->
+                            <!-- /ko --></span>
+                    </label>
+                    <div class="control">
+                        <input type="text" name="payment[cc_owner]" class="input-text" value="" data-bind="attr: {
+                                                autocomplete: off,
+                                                id: getCode() + '_cc_owner',
+                                                title: $t('Credit Card Owner Name'),
+                                                'data-container': getCode() + '-cc-owner',
+                                                'data-validate': JSON.stringify({'required':true})},
+                                        value: creditCardOwnerName,
+                                        valueUpdate: 'keyup'" />
+                    </div>
+                </div>
+                <div class="field number required">
+                    <label data-bind="attr: {for: getCode() + '_cpf'}" class="label">
+                        <span>
+                            <!-- ko i18n: 'CPF/CNPJ'-->
+                            <!-- /ko --></span>
+                    </label>
+                    <div class="control">
+                        <input type="tel" name="payment[cc_cpf_cnpj]" class="input-text" value="" data-bind="attr: {
+                                                autocomplete: off,
+                                                id: getCode() + '_cpf_cnpj',
+                                                title: $t('CPF/CNPJ'),
+                                                'data-container': getCode() + '-cpf_cnpj',
+                                                'data-validate': JSON.stringify({'required':true})},
+                                        value: creditCardOwnerCpf,
+                                        event: {
+                                            keypress: function(data, e){ return e.currentTarget.value.length < 14;}
+                                        },
+                                        valueUpdate: 'keyup'" />
+                    </div>
+                    <span id="card-cpf-msg"></span>
+                </div>
+                <div class="field number required">
+                    <label data-bind="attr: {for: getCode() + '_cc_owner_birthday_day'}" class="label">
+                        <span>
+                            <!-- ko i18n: 'Date of Birth'-->
+                            <!-- /ko --></span>
+                    </label>
+                    <div class="control">
+                        <input style="width: 50px;" type="tel" name="payment[cc_owner_birthday_day]"
+                            class="input-text cc_birthdate" value="" maxlength="2" max="31" data-bind="attr: {
+                                                autocomplete: off,
+                                                placeholder: 'DD',
+                                                id: getCode() + '_cc_owner_birthday_day',
+                                                title: $t('DD'),
+                                                'data-container': getCode() + '-cc-owner-birthday-day',
+                                                'data-validate': JSON.stringify({'required':true})},
+                                        value: creditCardOwnerBirthDay,
+                                        valueUpdate: 'keyup'" />
+                        <input style="width: 50px;" type="tel" name="payment[cc_owner_birthday_month]"
+                            class="input-text cc_birthdate" value="" maxlength="2" max="12" data-bind="attr: {
+                                                autocomplete: off,
+                                                placeholder: 'MM',
+                                                id: getCode() + '_cc_owner_birthday_month',
+                                                title: $t('MM'),
+                                                'data-container': getCode() + '-cc-owner-birthday-month',
+                                                'data-validate': JSON.stringify({'required':true})},
+                                        value: creditCardOwnerBirthMonth,
+                                        valueUpdate: 'keyup'" />
+                        <input style="width: 55px;" type="tel" name="payment[cc_owner_birthday_year]"
+                            class="input-text cc_birthdate cc_birthdate_year" value="" maxlength="4" max="2015"
+                            data-bind="attr: {
+                                                autocomplete: off,
+                                                placeholder: $t('YYYY'),
+                                                id: getCode() + '_cc_owner_birthday_year',
+                                                title: $t('YYYY'),
+                                                'data-container': getCode() + '-cc-owner-birthday-year',
+                                                'data-validate': JSON.stringify({'required':true})},
+                                        value: creditCardOwnerBirthYear,
+                                        valueUpdate: 'keyup'" />
+                    </div>
+                </div>
                 <!-- /ko -->
                 <div class="field required">
                     <label data-bind="attr: {for: getCode() + '_installments'}" class="label">
@@ -165,7 +244,7 @@
                                       options: getInstallments(),
                                       optionsValue: 'value',
                                       optionsText: 'installment',
-                                      value: transactionResult">
+                                      value: selectedInstallment">
                         </select>
                     </div>
                 </div>

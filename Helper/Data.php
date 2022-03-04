@@ -22,6 +22,7 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
 
     const API_HOST                                      = 'http://172.17.0.1:4000';
     const API_URL_GET_INSTALLMENTS                      = '/pipeline/integration/installment_politic/simulation';
+    const API_URL_POST_TRANSACTION                      = '/transaction/payment';
     const XML_PATH_PAYMENT_TOKEN                        = 'payment/chez_payments/api_token';
     const XML_PATH_PAYMENT_DEBUG                        = 'payment/chez_payments/debug';
 
@@ -142,6 +143,127 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
         $this->httpClient = $httpClient;
         parent::__construct($context);
     }
+    /**
+     * Set Transaction's Pipeline
+     * @param number
+     * @return bool|string
+     */
+    public function setTransaction($order, $payment)
+    {
+
+        $products = [];
+        foreach ($order->getAllItems() as $orderItem) {
+            //$productOptions = $orderItem->getProductOptions();
+            $productData = $orderItem->getData();
+            if (isset($productData['name']) && isset($productData['price']) && isset($productData['qty_ordered'])) {
+                if ($productData['price'] > 0) {
+                    $product = new stdClass();
+                    $product->title = $productData['name'];
+                    $product->value = $productData['price'];
+                    $product->quantity = $productData['qty_ordered'];
+                    array_push($products, $product);
+                }
+            }
+        }
+        //dd($products);
+        $data = $order->getData();
+        $aditional_data = $payment->getAdditionalInformation();
+
+        //dd($data, $aditional_data);
+        $shippingAddress = $order->getShippingAddress();
+        $phone = new stdClass();
+        $phone->countryCode = "55";
+        $phone->areaCode = substr($shippingAddress->getTelephone(), 0, 2);
+        $phone->number = substr($shippingAddress->getTelephone(), 2);
+        $cidade = $this->getCidadeFromDdd($phone->areaCode);
+        //dd($cidade);
+        //dd($shippingAddress);
+
+        $address = new stdClass();
+        $address->street = join(" ", $shippingAddress->getStreet());
+        //$address->district = $shippingAddress->getStreet();
+        $address->number = 'SN';
+        $address->state = $cidade['uf'];
+        $address->city = $shippingAddress->getCity();
+        $address->postal_code = $shippingAddress->getPostCode();
+        $address->country = $shippingAddress->getCountryId();
+        dd($address);
+        //$address->complement = $shippingAddress->getStreet();
+
+
+        $credit_card = new stdClass();
+        $credit_card->card_number = $aditional_data['cc_number'];
+        $credit_card->cvc = $aditional_data['cc_cid'];
+        $credit_card->expirationMonth = $aditional_data['cc_exp_month'];
+        $credit_card->expirationYear = $aditional_data['cc_exp_year'];
+        $credit_card->holder = $aditional_data['cc_owner_name'];
+        $selected_installment = explode('|', $aditional_data['selected_installment']);
+        $installmentCount = 1;
+        if (count($selected_installment) > 1)
+            $installmentCount = $selected_installment[0];
+        else {
+            if (strlen($selected_installment[0]) == 2)
+                $installmentCount = substr($selected_installment[0], 0, 1);
+            if (strlen($selected_installment[0]) == 3)
+                $installmentCount = substr($selected_installment[0], 0, 2);
+        }
+
+
+        $credit_card->installmentCount = $installmentCount;
+
+        $params = new stdClass();
+        $params->token = $this->getToken();
+        $params->payment_method = 'credit';
+        $params->credit_card = $credit_card;
+        $params->cpf_cnpj = $aditional_data['cc_owner_cpf_cnpj'];
+        $params->fullname = $aditional_data['cc_owner_name'];
+        $params->costumer_type = strlen($params->cpf_cnpj) < 14 ? 'pf' : 'pj';
+        $params->email = $data['customer_email'];
+        $params->birthdate = $aditional_data['cc_owner_birthday_year'] . '-' .
+            $aditional_data['cc_owner_birthday_month'] . '-' .
+            $aditional_data['cc_owner_birthday_day'];
+        $params->address = $address;
+        $params->phone = $phone;
+        $params->description = 'description';
+        $params->products = $products;
+
+        //dd($params);
+
+        $this->writeLog('Parameters being sent to API URL (' . self::API_URL_POST_TRANSACTION . '): ' . var_export($params, true));
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, self::API_HOST . self::API_URL_POST_TRANSACTION);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($params));
+        curl_setopt($ch, CURLOPT_TIMEOUT, 45);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $this->getHeaders());
+
+        try {
+            $response = curl_exec($ch);
+
+            if (curl_error($ch)) {
+                $this->writeLog('-----Curl error response----: ' . var_export(curl_error($ch), true));
+                throw new \Magento\Framework\Validator\Exception(new \Magento\Framework\Phrase(curl_error($ch)));
+            }
+
+            curl_close($ch);
+
+            $this->writeLog('Retorno Chez (/' . self::API_URL_GET_INSTALLMENTS . '): ' . var_export($response, true));
+
+            return json_encode(
+                array('success' => json_decode($response))
+            );
+        } catch (\Exception $e) {
+            $this->messageManager->addErrorMessage(__('Communication failure with Chez API'), 'Error');
+            $this->writeLog('Communication failure with Chez API: ' . $e->getMessage());
+            return json_encode(
+                array('error' => 'Communication failure with Chez API (' . $e->getMessage() . ')')
+            );
+        }
+    }
 
     /**
      * Get installments from Pipeline
@@ -194,6 +316,212 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
         }
     }
 
+    function getCidadeFromDdd($ddd)
+    {
+        switch ($ddd) {
+            case '68':
+                return ['uf' => 'AC', 'description' => 'Acre'];
+                break;
+            case '82':
+                return ['uf' => 'AL', 'description' => 'Alagoas'];
+                break;
+            case '96':
+                return ['uf' => 'AP', 'description' => 'Amapá'];
+                break;
+            case '92':
+                return ['uf' => 'AM', 'description' => 'Amazonas'];
+                break;
+            case '71':
+                return ['uf' => 'BA', 'description' => 'Bahia'];
+                break;
+            case '73':
+                return ['uf' => 'BA', 'description' => 'Bahia'];
+                break;
+            case '74':
+                return ['uf' => 'BA', 'description' => 'Bahia'];
+                break;
+            case '75':
+                return ['uf' => 'BA', 'description' => 'Bahia'];
+                break;
+            case '77':
+                return ['uf' => 'BA', 'description' => 'Bahia'];
+                break;
+            case '85':
+                return ['uf' => 'CE', 'description' => 'Ceará'];
+                break;
+            case '88':
+                return ['uf' => 'CE', 'description' => 'Ceará'];
+                break;
+            case '61':
+                return ['uf' => 'DF', 'description' => 'Brasília'];
+                break;
+            case '27':
+                return ['uf' => 'ES', 'description' => 'Espirito Santo'];
+                break;
+            case '28':
+                return ['uf' => 'ES', 'description' => 'Espirito Santo'];
+                break;
+            case '62':
+                return ['uf' => 'GO', 'description' => 'Goiás'];
+                break;
+            case '64':
+                return ['uf' => 'GO', 'description' => 'Goiás'];
+                break;
+            case '98':
+                return ['uf' => 'MA', 'description' => 'Maranhão'];
+                break;
+            case '99':
+                return ['uf' => 'MA', 'description' => 'Maranhão'];
+                break;
+            case '65':
+                return ['uf' => 'MT', 'description' => 'Mato Grosso'];
+                break;
+            case '66':
+                return ['uf' => 'MT', 'description' => 'Mato Grosso'];
+                break;
+            case '67':
+                return ['uf' => 'MS', 'description' => 'Mato Grosso do Sul'];
+                break;
+            case '31':
+                return ['uf' => 'MG', 'description' => 'Minas Gerais'];
+                break;
+            case '32':
+                return ['uf' => 'MG', 'description' => 'Minas Gerais'];
+                break;
+            case '33':
+                return ['uf' => 'MG', 'description' => 'Minas Gerais'];
+                break;
+            case '34':
+                return ['uf' => 'MG', 'description' => 'Minas Gerais'];
+                break;
+            case '35':
+                return ['uf' => 'MG', 'description' => 'Minas Gerais'];
+                break;
+            case '37':
+                return ['uf' => 'MG', 'description' => 'Minas Gerais'];
+                break;
+            case '38':
+                return ['uf' => 'MG', 'description' => 'Minas Gerais'];
+                break;
+            case '91':
+                return ['uf' => 'PA', 'description' => 'Pará'];
+                break;
+            case '93':
+                return ['uf' => 'PA', 'description' => 'Pará'];
+                break;
+            case '94':
+                return ['uf' => 'PA', 'description' => 'Pará'];
+                break;
+            case '83':
+                return ['uf' => 'PB', 'description' => 'Paraíba'];
+                break;
+            case '41':
+                return ['uf' => 'PR', 'description' => 'Paraná'];
+                break;
+            case '42':
+                return ['uf' => 'PR', 'description' => 'Paraná'];
+                break;
+            case '43':
+                return ['uf' => 'PR', 'description' => 'Paraná'];
+                break;
+            case '44':
+                return ['uf' => 'PR', 'description' => 'Paraná'];
+                break;
+            case '45':
+                return ['uf' => 'PR', 'description' => 'Paraná'];
+                break;
+            case '46':
+                return ['uf' => 'PR', 'description' => 'Paraná'];
+                break;
+            case '81':
+                return ['uf' => 'PE', 'description' => 'Pernambuco'];
+                break;
+            case '87':
+                return ['uf' => 'PE', 'description' => 'Pernambuco'];
+                break;
+            case '86':
+                return ['uf' => 'PI', 'description' => 'Piauí'];
+                break;
+            case '89':
+                return ['uf' => 'PI', 'description' => 'Piauí'];
+                break;
+            case '21':
+                return ['uf' => 'RJ', 'description' => 'Rio de Janeiro'];
+                break;
+            case '22':
+                return ['uf' => 'RJ', 'description' => 'Rio de Janeiro'];
+                break;
+            case '24':
+                return ['uf' => 'RJ', 'description' => 'Rio de Janeiro'];
+                break;
+            case '84':
+                return ['uf' => 'RN', 'description' => 'Rio Grande do Norte'];
+                break;
+            case '54':
+                return ['uf' => 'RN', 'description' => 'Rio Grande do Norte'];
+                break;
+            case '55':
+                return ['uf' => 'RS', 'description' => 'Rio Grande do Sul'];
+                break;
+            case '51':
+                return ['uf' => 'RS', 'description' => 'Rio Grande do Sul'];
+                break;
+            case '53':
+                return ['uf' => 'RS', 'description' => 'Rio Grande do Sul'];
+                break;
+            case '69':
+                return ['uf' => 'RO', 'description' => 'Rondônia'];
+                break;
+            case '95':
+                return ['uf' => 'RR', 'description' => 'Roraima'];
+                break;
+            case '47':
+                return ['uf' => 'SC', 'description' => 'Santa Cataria'];
+                break;
+            case '48':
+                return ['uf' => 'SC', 'description' => 'Santa Cataria'];
+                break;
+            case '49':
+                return ['uf' => 'SC', 'description' => 'Santa Cataria'];
+                break;
+            case '11':
+                return ['uf' => 'SP', 'description' => 'São Paulo'];
+                break;
+            case '12':
+                return ['uf' => 'SP', 'description' => 'São Paulo'];
+                break;
+            case '13':
+                return ['uf' => 'SP', 'description' => 'São Paulo'];
+                break;
+            case '14':
+                return ['uf' => 'SP', 'description' => 'São Paulo'];
+                break;
+            case '15':
+                return ['uf' => 'SP', 'description' => 'São Paulo'];
+                break;
+            case '16':
+                return ['uf' => 'SP', 'description' => 'São Paulo'];
+                break;
+            case '17':
+                return ['uf' => 'SP', 'description' => 'São Paulo'];
+                break;
+            case '18':
+                return ['uf' => 'SP', 'description' => 'São Paulo'];
+                break;
+            case '19':
+                return ['uf' => 'SP', 'description' => 'São Paulo'];
+                break;
+            case '79':
+                return ['uf' => 'SE', 'description' => 'Sergipe'];
+                break;
+            case '63':
+                return ['uf' => 'TO', 'description' => 'Tocatins'];
+                break;
+            default:
+                return ['uf' => 'DF', 'description' => 'Brasília'];
+                break;
+        }
+    }
     /**
      * Returns session ID from PagSeguro that will be used on JavaScript methods.
      * or FALSE on failure
@@ -1254,7 +1582,7 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
             'Content-Type: application/json',
             //'Accept: application/json',
             'Platform-Version: ' . $this->getMagentoVersion(),
-            'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2MWU5NjhiOGQ3MTEzYzAwMjA2OWJkMDEiLCJwZXJtaXNzaW9ucyI6W10sImlhdCI6MTY0NTc4NjU4MCwiZXhwIjoxNjQ1ODAwOTgwLCJhdWQiOiJtb2JpeHRlYy5jb20iLCJpc3MiOiJhY2NvdW50cy5tb2JpeHRlYy5jb20ifQ.J1Xxey-A1i4VnNf7hMUk5bWhfj5y5tqdLksgiXN_fGo'
+            'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2MWU5NjhiOGQ3MTEzYzAwMjA2OWJkMDEiLCJwZXJtaXNzaW9ucyI6W10sImlhdCI6MTY0NjQxNDI3OCwiZXhwIjoxNjQ2NDI4Njc4LCJhdWQiOiJtb2JpeHRlYy5jb20iLCJpc3MiOiJhY2NvdW50cy5tb2JpeHRlYy5jb20ifQ.5tuyUy0WGspIMTnmDmuETlNDE0bxvx2-TVCBbT1wPXU'
         ];
 
         return $headers;

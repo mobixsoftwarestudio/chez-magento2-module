@@ -15,7 +15,7 @@ use Magento\Payment\Model\Method\Cc;
 /**
  * Pay In Store payment method model
  */
-class Payment extends Adapter
+class Payment extends Cc
 {
     const CODE = 'chez_payments';
     protected $_code = self::CODE;
@@ -47,6 +47,78 @@ class Payment extends Adapter
         $this->_helper = $chezHelper;
         $this->_helper->writeLog('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx');
     }
+
+    /**
+     * Assign data to info model instance
+     *
+     * @param   mixed $data
+     * @return  object
+     */
+    public function assignData(\Magento\Framework\DataObject $data)
+    {
+        parent::assignData($data);
+
+        $this->_helper->writeLog('============ assignData');
+
+        if (!$data instanceof \Magento\Framework\DataObject) {
+            $data = new \Magento\Framework\DataObject($data);
+        }
+
+        $info = $this->getInfoInstance();
+        // $info->setAdditionalInformation('sender_hash', $data['additional_data']['sender_hash'] ?? null)
+        //     ->setAdditionalInformation(
+        //         'credit_card_token',
+        //         $data['additional_data']['credit_card_token'] ?? null
+        //     )
+        //     ->setAdditionalInformation('credit_card_owner', $data['additional_data']['cc_owner_name'] ?? null)
+        //     ->setCcType($data['additional_data']['cc_type'] ?? null)
+        //     ->setCcLast4(substr($data['additional_data']['cc_number'] ?? null, -4))
+        //     ->setCcExpYear($data['additional_data']['cc_exp_year'] ?? null)
+        //     ->setCcExpMonth($data['additional_data']['cc_exp_month'] ?? null);
+
+        // set cpf
+        $ccOwnerCpf = $data['additional_data']['cc_owner_cpf_cnpj'] ?? null;
+        $info->setAdditionalInformation($this->getCode() . '_cc_owner_cpf_cnpj', $ccOwnerCpf);
+
+        // //DOB value
+        // if ($this->pagSeguroHelper->isDobVisible()) {
+        //     $dobDay = isset($data['additional_data']['cc_owner_birthday_day']) ? trim(
+        //         $data['additional_data']['cc_owner_birthday_day']
+        //     ) : '01';
+        //     $dobMonth = isset($data['additional_data']['cc_owner_birthday_month']) ? trim(
+        //         $data['additional_data']['cc_owner_birthday_month']
+        //     ) : '01';
+        //     $dobYear = isset($data['additional_data']['cc_owner_birthday_year']) ? trim(
+        //         $data['additional_data']['cc_owner_birthday_year']
+        //     ) : '1970';
+        //     $info->setAdditionalInformation(
+        //         'credit_card_owner_birthdate',
+        //         date(
+        //             'd/m/Y',
+        //             strtotime(
+        //                 $dobMonth . '/' . $dobDay . '/' . $dobYear
+        //             )
+        //         )
+        //     );
+        // }
+
+        // //Installments value
+        // if (isset($data['additional_data']['cc_installments'])) {
+        //     $installments = explode('|', $data['additional_data']['cc_installments']);
+        //     if (false !== $installments && count($installments) == 2) {
+        //         $info->setAdditionalInformation('installment_quantity', (int)$installments[0]);
+        //         $info->setAdditionalInformation('installment_value', $installments[1]);
+        //     }
+        // }
+
+        // //Sandbox Mode
+        // if ($this->pagSeguroHelper->isSandbox()) {
+        //     $info->setAdditionalInformation('is_sandbox', '1');
+        // }
+
+        return $this;
+    }
+
     public function capture(\Magento\Payment\Model\InfoInterface $payment, $amount)
     {
         try {

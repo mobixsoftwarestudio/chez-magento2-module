@@ -38,6 +38,11 @@ class OrderObserver extends AbstractDataAssignObserver
     {
         $order = $observer->getEvent()->getOrder();
         $payment = $order->getPayment();
+        //dd($order, $payment);
+
+        $transaction_result = $this->helper->setTransaction($order, $payment);
+
+        dd($transaction_result);
 
         // if ($payment->getAdditionalInformation('stripe_outcome_type') == "manual_review")
         //     $this->helper->holdOrder($order)->save();

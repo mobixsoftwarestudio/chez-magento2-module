@@ -34,14 +34,22 @@ define(
         return Component.extend({
             defaults: {
                 template: 'Chez_Payments/payment/form',
-                transactionResult: ''
+                creditCardOwnerName: '',
+                creditCardOwnerBirthDay: '',
+                creditCardOwnerBirthMonth: '',
+                creditCardOwnerBirthYear: '',
+                creditCardOwnerCpf: '',
+                creditCardInstallments: '',
+                disablePlaceOrderButton: false,
+                showCreditCardIcons: true,
+                showLegendCreditCardIcons: true,
             },
 
             initObservable: function () {
 
                 this._super()
                     .observe([
-                        'transactionResult',
+                        'selectedInstallment',
                         'creditCardOwnerName',
                         'creditCardOwnerBirthDay',
                         'creditCardOwnerBirthMonth',
@@ -69,15 +77,38 @@ define(
                 return true;
             },
 
+            isShowLegend: function () {
+                return false;
+            },
+
             getCode: function () {
                 return 'chez_payments';
             },
 
             getData: function () {
+                let originalCcNumber = this.creditCardNumber();
+                let ccNumber =
+                    originalCcNumber.substring(0, 4).padEnd(originalCcNumber.length - 4, '*') +
+                    originalCcNumber.substring(originalCcNumber.length - 4);
+
+
                 return {
-                    'method': this.item.method,
+                    'method': this.getCode(),
                     'additional_data': {
-                        'transaction_result': this.transactionResult()
+                        'cc_cid': this.creditCardVerificationNumber(),
+                        'cc_ss_start_month': this.creditCardSsStartMonth(),
+                        'cc_ss_start_year': this.creditCardSsStartYear(),
+                        'cc_ss_issue': this.creditCardSsIssue(),
+                        'cc_type': this.creditCardType(),
+                        'cc_exp_year': this.creditCardExpYear(),
+                        'cc_exp_month': this.creditCardExpMonth(),
+                        'cc_number': this.creditCardNumber(),
+                        'cc_owner_name': this.creditCardOwnerName(),
+                        'cc_owner_birthday_day': this.creditCardOwnerBirthDay(),
+                        'cc_owner_birthday_month': this.creditCardOwnerBirthMonth(),
+                        'cc_owner_birthday_year': this.creditCardOwnerBirthYear(),
+                        'cc_owner_cpf_cnpj': this.creditCardOwnerCpf(),
+                        'selected_installment': this.selectedInstallment()
                     }
                 };
             },
@@ -88,6 +119,26 @@ define(
                 var $form = $('#' + this.getCode() + '-form');
                 return $form.validation() && $form.validation('isValid');
             },
+            beforePlaceOrder: function (data) {
+                console.log('beforePlaceOrder');
+                console.log(data);
+            },
+            // placeOrder: function (data, event) {
+
+            //     let messageContainer = this.messageContainer || globalMessageList;
+
+            //     if (event) {
+            //         event.preventDefault();
+            //     }
+
+            //     if (this.validate()) {
+            //         fullScreenLoader.startLoader();
+            //         this.disablePlaceOrderButton(true);
+            //     }
+
+            //     return false;
+            // },
+
             /**
              * Triggers the update of the installments (consulted on Chez API)
              */
