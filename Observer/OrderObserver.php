@@ -24,7 +24,6 @@ class OrderObserver extends AbstractDataAssignObserver
      */
     public function execute(Observer $observer)
     {
-        $this->helper->writeLog('XXXXIIIIIIIIIIIIIIICAAAAAAAAAAAAAA');
         $order = $observer->getEvent()->getOrder();
         $eventName = $observer->getEvent()->getName();
         $method = $order->getPayment()->getMethod();
