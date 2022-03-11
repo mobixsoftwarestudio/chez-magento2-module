@@ -19,18 +19,18 @@ class PaymentMethodActiveObserver extends AbstractDataAssignObserver
      */
     public function execute(Observer $observer)
     {
-        $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
-        $cart = $objectManager->get('\Magento\Checkout\Model\Cart');
+        // $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
+        // $cart = $objectManager->get('\Magento\Checkout\Model\Cart');
 
-        $subTotal = $cart->getQuote()->getSubtotal();
-        $grandTotal = $cart->getQuote()->getGrandTotal();
+        // $subTotal = $cart->getQuote()->getSubtotal();
+        // $grandTotal = $cart->getQuote()->getGrandTotal();
 
-        $total = $observer->getData('total');
-        $this->_logHelper->writeLog('---------subTotal');
-        $this->_logHelper->writeLog($subTotal);
-        $quote = $observer->getEvent()->getQuote();
-        $this->_logHelper->writeLog('---------total');
-        $this->_logHelper->writeLog($grandTotal);
+        // $total = $observer->getData('total');
+        // $this->_logHelper->writeLog('---------subTotal');
+        // $this->_logHelper->writeLog($subTotal);
+        // $quote = $observer->getEvent()->getQuote();
+        // $this->_logHelper->writeLog('---------total');
+        // $this->_logHelper->writeLog($grandTotal);
 
         // if (!$this->config->isSubscriptionsEnabled())
         //     return;

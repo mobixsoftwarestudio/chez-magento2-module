@@ -38,17 +38,18 @@ class OrderObserver extends AbstractDataAssignObserver
     {
         $order = $observer->getEvent()->getOrder();
         $payment = $order->getPayment();
-        //dd($order, $payment);
 
         $transaction_result = $this->helper->setTransaction($order, $payment);
+        $response = json_decode($transaction_result);
 
-        dd($transaction_result);
-
-        // if ($payment->getAdditionalInformation('stripe_outcome_type') == "manual_review")
-        //     $this->helper->holdOrder($order)->save();
-
-        $comment = __("CHEZ: Pagamento processado com sucesso!");
-        $order->addStatusToHistory($status = \Magento\Sales\Model\Order::STATE_COMPLETE, $comment, $isCustomerNotified = false);
-        $order->save();
+        if ($response->error) {
+            $comment = __("CHEZ: Ocorreu um erro ao processar o pagamento!");
+            $order->addStatusToHistory($status = \Magento\Sales\Model\Order::STATE_PENDING_PAYMENT, $comment, $isCustomerNotified = true);
+            $order->save();
+        } else {
+            $comment = __("CHEZ: Pagamento processado com sucesso!");
+            $order->addStatusToHistory($status = \Magento\Sales\Model\Order::STATE_COMPLETE, $comment, $isCustomerNotified = true);
+            $order->save();
+        }
     }
 }

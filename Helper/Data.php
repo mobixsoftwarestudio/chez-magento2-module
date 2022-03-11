@@ -9,108 +9,34 @@ use Magento\Sales\Model\Order\Email\Sender\OrderCommentSender;
 use Magento\Framework\HTTP\ClientInterface;
 use stdClass;
 
-/**
- * Class Data Helper
- *
- * @see       http://bit.ly/pagseguromagento Official Website
- * @author    Ricardo Martins (and others) <pagseguro-transparente@ricardomartins.net.br>
- * @copyright 2018-2020 Ricardo Martins
- * @license   https://www.gnu.org/licenses/gpl-3.0.pt-br.html GNU GPL, version 3
- */
 class Data extends \Magento\Framework\App\Helper\AbstractHelper
 {
 
-    const API_HOST                                      = 'http://172.17.0.1:4000';
+    const API_URL                                       = 'payment/chez_payments/api_url'; //'http://172.17.0.1:4000'; //
     const API_URL_GET_INSTALLMENTS                      = '/pipeline/integration/installment_politic/simulation';
     const API_URL_POST_TRANSACTION                      = '/transaction/payment';
     const XML_PATH_PAYMENT_TOKEN                        = 'payment/chez_payments/api_token';
     const XML_PATH_PAYMENT_DEBUG                        = 'payment/chez_payments/debug';
 
-    const XML_PATH_PAUMENT_PAGSEGURO_SANDBOX            = 'payment/rm_pagseguro/sandbox';
-    const XML_PATH_PAYMENT_PAGSEGURO_SANDBOX_EMAIL      = 'payment/rm_pagseguro/sandbox_merchant_email';
-    const XML_PATH_PAYMENT_PAGSEGURO_SANDBOX_KEY      = 'payment/rm_pagseguro/sandbox_key';
-    //@TODO Remove hardcoded value in constant and move to config.xml defaults
-    const XML_PATH_PAYMENT_PAGSEGURO_WS_URL             = 'https://ws.ricardomartins.net.br/pspro/v6/wspagseguro/v2/';
-    const XML_PATH_PAYMENT_PAGSEGURO_WS_URL_APP         = 'payment/rm_pagseguro/ws_url_app';
-    const XML_PATH_PAYMENT_PAGSEGURO_JS_URL             = 'https://stc.pagseguro.uol.com.br/pagseguro/api/v2/checkout/pagseguro.directpayment.js';
-    const XML_PATH_PAYMENT_PAGSEGURO_SANDBOX_WS_URL     = 'https://ws.ricardomartins.net.br/pspro/v7/wspagseguro/v2/';
-    const XML_PATH_PAYMENT_PAGSEGURO_SANDBOX_WS_URL_APP = 'payment/rm_pagseguro/sandbox_ws_url_app';
-    const XML_PATH_PAYMENT_PAGSEGURO_ENABLE_UPDATER     = 'payment/rm_pagseguro/enable_updater';
-    const XML_PATH_PAYMENT_PAGSEGURO_SANDBOX_JS_URL     = 'https://stc.sandbox.pagseguro.uol.com.br/pagseguro/api/v2/checkout/pagseguro.directpayment.js';
-    const XML_PATH_PAYMENT_PAGSEGURO_CC_ACTIVE          = 'payment/rm_pagseguro_cc/active';
-    const XML_PATH_PAYMENT_PAGSEGURO_TWOCC_ACTIVE       = 'payment/rm_pagseguro_twocc/active';
-    const XML_PATH_PAYMENT_PAGSEGURO_CC_FLAG            = 'payment/rm_pagseguro_cc/flag';
-    const XML_PATH_PAYMENT_PAGSEGURO_CC_INFO_BRL        = 'payment/rm_pagseguro_cc/info_brl';
-    const XML_PATH_PAYMENT_PAGSEGURO_CC_SHOW_TOTAL      = 'payment/rm_pagseguro_cc/show_total';
-    const XML_PATH_PAYMENT_PAGSEGURO_TEF_ACTIVE         = 'payment/rm_pagseguro_tef/active';
-    const XML_PATH_PAYMENT_PAGSEGURO_BOLETO_ACTIVE      = 'payment/rm_pagseguro_boleto/active';
-    const XML_PATH_PAYMENT_PAGSEGURO_KEY                = 'payment/rm_pagseguro/key';
-    const XML_PATH_PAYMENT_PAGSEGURO_CC_FORCE_INSTALLMENTS = 'payment/rm_pagseguro_cc/force_installments_selection';
-    const XML_PATH_PAYMENT_PAGSEGURO_REDIRECT_TO_SUCCESSPAGE = 'payment/rm_pagseguro_pagar_no_pagseguro/redirect_to_success_page';
-
-    /**
-     * Store Manager
-     *
-     * @var  \Magento\Store\Model\StoreManagerInterface
-     */
     protected $storeManager;
 
-    /**
-     * Quote Session
-     *
-     * @var  \Magento\Checkout\Model\Session
-     */
     protected $checkoutSession;
 
-    /**
-     * Quote Session
-     *
-     * @var  \Magento\Customer\Model\Customer
-     */
     protected $customer;
-
-    protected $authResponse;
 
     protected $_curl;
 
-    /** @var \Magento\Framework\Serialize\SerializerInterface  */
     protected $serializer;
-    /**
-     * @var \Magento\Framework\HTTP\PhpEnvironment\RemoteAddress
-     */
+
     private $remoteAddress;
 
-    /**
-     * @var \Magento\Sales\Api\TransactionRepositoryInterface
-     */
     protected $transactionRepository;
 
-    /**
-     * @var OrderCommentSender
-     */
     protected $orderCommentSender;
 
-    /**
-     * @var ClientInterface
-     */
     protected $httpClient;
 
     protected $messageManager;
-
-    /**
-     * @param \Magento\Store\Model\StoreManagerInterface        $storeManager
-     * @param \Magento\Checkout\Model\Session                   $checkoutSession
-     * @param \Magento\Customer\Model\Customer                  $customer
-     * @param \Magento\Framework\App\Helper\Context             $context
-     * @param Logger                                            $loggerHelper
-     * @param \Magento\Framework\App\ProductMetadataInterface   $productMetadata
-     * @param \Magento\Framework\Module\ModuleListInterface     $moduleList
-     * @param \Magento\Framework\HTTP\Client\Curl               $curl
-     * @param \Magento\Framework\Serialize\SerializerInterface  $serializer
-     * @param \Magento\Sales\Api\TransactionRepositoryInterface $transactionRepository
-     * @param OrderCommentSender                                $orderCommentSender
-     * @param ClientInterface                                   $httpClient
-     */
 
     public function __construct(
         \Magento\Framework\Message\ManagerInterface $messageManager,
@@ -143,105 +69,117 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
         $this->httpClient = $httpClient;
         parent::__construct($context);
     }
+
     /**
-     * Set Transaction's Pipeline
-     * @param number
-     * @return bool|string
+     * Set the header details.
+     * @return Array
      */
+    public function setHeaders()
+    {
+        $headers = [
+            'Platform: Magento',
+            'Content-Type: application/json',
+            //'Accept: application/json',
+            'Platform-Version: ' . $this->getMagentoVersion(),
+            //'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2MWU5NjhiOGQ3MTEzYzAwMjA2OWJkMDEiLCJwZXJtaXNzaW9ucyI6W10sImlhdCI6MTY0NjQ4NDY1MCwiZXhwIjoxNjQ2NDk5MDUwLCJhdWQiOiJtb2JpeHRlYy5jb20iLCJpc3MiOiJhY2NvdW50cy5tb2JpeHRlYy5jb20ifQ.5J5ejal_y1d6ukXO2RA9rJSwDle1tK1iiLmyrM9mEB0'
+        ];
+
+        return $headers;
+    }
+
+    /**
+     * Create a transaction using Chez API.
+     * * @param order
+     * * @param payment
+     * @return Array
+     */
+
     public function setTransaction($order, $payment)
     {
 
-        $products = [];
-        foreach ($order->getAllItems() as $orderItem) {
-            //$productOptions = $orderItem->getProductOptions();
-            $productData = $orderItem->getData();
-            if (isset($productData['name']) && isset($productData['price']) && isset($productData['qty_ordered'])) {
-                if ($productData['price'] > 0) {
-                    $product = new stdClass();
-                    $product->title = $productData['name'];
-                    $product->value = $productData['price'];
-                    $product->quantity = $productData['qty_ordered'];
-                    array_push($products, $product);
-                }
+        try {
+
+            $products = $this->getItemsParams($order);
+
+            $order_data = $order->getData();
+            $aditional_data = $payment->getAdditionalInformation();
+
+            $shippingAddress = $order->getShippingAddress();
+            $phone = new stdClass();
+            $phone->countryCode = "55";
+            $phone->areaCode = substr($shippingAddress->getTelephone(), 0, 2);
+            $phone->number = substr($shippingAddress->getTelephone(), 2);
+
+            $cidade = $this->getCityFromAreaCode($phone->areaCode);
+
+            $address = new stdClass();
+            $address->street = join(" ", $shippingAddress->getStreet());
+            $address->district = 'Bairro';
+            $address->number = 'SN';
+            $address->state = $cidade['uf'];
+            $address->city = $shippingAddress->getCity();
+            $address->postal_code = $shippingAddress->getPostCode();
+            $address->country = $shippingAddress->getCountryId();
+
+            $credit_card = new stdClass();
+            $credit_card->card_number = $aditional_data['cc_number'];
+            $credit_card->cvc = $aditional_data['cc_cid'];
+            $credit_card->expirationMonth = $aditional_data['cc_exp_month'];
+            $credit_card->expirationYear = $aditional_data['cc_exp_year'];
+            $credit_card->holder = $aditional_data['cc_owner_name'];
+            $selected_installment = explode('|', $aditional_data['selected_installment']);
+            $installmentCount = 1;
+            if (count($selected_installment) > 1)
+                $installmentCount = $selected_installment[0];
+            else {
+                if (strlen($selected_installment[0]) == 2)
+                    $installmentCount = substr($selected_installment[0], 0, 1);
+                if (strlen($selected_installment[0]) == 3)
+                    $installmentCount = substr($selected_installment[0], 0, 2);
             }
-        }
-        //dd($products);
-        $data = $order->getData();
-        $aditional_data = $payment->getAdditionalInformation();
-
-        //dd($data, $aditional_data);
-        $shippingAddress = $order->getShippingAddress();
-        $phone = new stdClass();
-        $phone->countryCode = "55";
-        $phone->areaCode = substr($shippingAddress->getTelephone(), 0, 2);
-        $phone->number = substr($shippingAddress->getTelephone(), 2);
-        $cidade = $this->getCidadeFromDdd($phone->areaCode);
-        //dd($cidade);
-        //dd($shippingAddress);
-
-        $address = new stdClass();
-        $address->street = join(" ", $shippingAddress->getStreet());
-        //$address->district = $shippingAddress->getStreet();
-        $address->number = 'SN';
-        $address->state = $cidade['uf'];
-        $address->city = $shippingAddress->getCity();
-        $address->postal_code = $shippingAddress->getPostCode();
-        $address->country = $shippingAddress->getCountryId();
-        dd($address);
-        //$address->complement = $shippingAddress->getStreet();
 
 
-        $credit_card = new stdClass();
-        $credit_card->card_number = $aditional_data['cc_number'];
-        $credit_card->cvc = $aditional_data['cc_cid'];
-        $credit_card->expirationMonth = $aditional_data['cc_exp_month'];
-        $credit_card->expirationYear = $aditional_data['cc_exp_year'];
-        $credit_card->holder = $aditional_data['cc_owner_name'];
-        $selected_installment = explode('|', $aditional_data['selected_installment']);
-        $installmentCount = 1;
-        if (count($selected_installment) > 1)
-            $installmentCount = $selected_installment[0];
-        else {
-            if (strlen($selected_installment[0]) == 2)
-                $installmentCount = substr($selected_installment[0], 0, 1);
-            if (strlen($selected_installment[0]) == 3)
-                $installmentCount = substr($selected_installment[0], 0, 2);
+            $credit_card->installmentCount = $installmentCount;
+
+            $params = new stdClass();
+            $params->token = $this->getToken();
+            $params->payment_method = 'credit';
+            $params->credit_card = $credit_card;
+            $params->cpf_cnpj = $aditional_data['cc_owner_cpf_cnpj'];
+            $params->fullname = $aditional_data['cc_owner_name'];
+            $params->costumer_type = strlen($params->cpf_cnpj) < 14 ? 'pf' : 'pj';
+            $params->email = $order_data['customer_email'];
+            $params->birthdate = $aditional_data['cc_owner_birthday_year'] . '-' .
+                $aditional_data['cc_owner_birthday_month'] . '-' .
+                $aditional_data['cc_owner_birthday_day'];
+            $params->address = $address;
+            $params->phone = $phone;
+            $params->description = 'Magento Pagamento ID:' . $payment->getTransactionId();
+            $params->products = $products;
+
+            //dd($params);
+        } catch (\Exception $e) {
+            $this->messageManager->addErrorMessage('Error on parse params:' . $e->getMessage(), 'Error');
+            $this->writeLog('Error on parse params: ' . $e->getMessage());
+            return json_encode(
+                array('error' => 'Error on parse params (' . $e->getMessage() . ')')
+            );
         }
 
-
-        $credit_card->installmentCount = $installmentCount;
-
-        $params = new stdClass();
-        $params->token = $this->getToken();
-        $params->payment_method = 'credit';
-        $params->credit_card = $credit_card;
-        $params->cpf_cnpj = $aditional_data['cc_owner_cpf_cnpj'];
-        $params->fullname = $aditional_data['cc_owner_name'];
-        $params->costumer_type = strlen($params->cpf_cnpj) < 14 ? 'pf' : 'pj';
-        $params->email = $data['customer_email'];
-        $params->birthdate = $aditional_data['cc_owner_birthday_year'] . '-' .
-            $aditional_data['cc_owner_birthday_month'] . '-' .
-            $aditional_data['cc_owner_birthday_day'];
-        $params->address = $address;
-        $params->phone = $phone;
-        $params->description = 'description';
-        $params->products = $products;
-
-        //dd($params);
-
-        $this->writeLog('Parameters being sent to API URL (' . self::API_URL_POST_TRANSACTION . '): ' . var_export($params, true));
-
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, self::API_HOST . self::API_URL_POST_TRANSACTION);
-        curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($params));
-        curl_setopt($ch, CURLOPT_TIMEOUT, 45);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $this->getHeaders());
 
         try {
+            $this->writeLog('Parameters being sent to API URL (' . self::API_URL_POST_TRANSACTION . '): ' . var_export($params, true));
+
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $this->getApiUrl() . self::API_URL_POST_TRANSACTION);
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($params));
+            curl_setopt($ch, CURLOPT_TIMEOUT, 45);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $this->setHeaders());
+
             $response = curl_exec($ch);
 
             if (curl_error($ch)) {
@@ -253,9 +191,16 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
 
             $this->writeLog('Retorno Chez (/' . self::API_URL_GET_INSTALLMENTS . '): ' . var_export($response, true));
 
-            return json_encode(
-                array('success' => json_decode($response))
-            );
+            $response = json_decode($response);
+            if (isset($response->message) && strtolower(trim($response->message)) == 'there are validation errors.') {
+                return json_encode(
+                    array('error' => $response)
+                );
+            } else {
+                return json_encode(
+                    array('success' => $response)
+                );
+            }
         } catch (\Exception $e) {
             $this->messageManager->addErrorMessage(__('Communication failure with Chez API'), 'Error');
             $this->writeLog('Communication failure with Chez API: ' . $e->getMessage());
@@ -268,7 +213,7 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
     /**
      * Get installments from Pipeline
      * @param number
-     * @return bool|string
+     * @return number
      */
     public function getInstallments($value)
     {
@@ -283,14 +228,14 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
         $this->writeLog('Parameters being sent to API URL (' . self::API_URL_GET_INSTALLMENTS . '): ' . var_export($params, true));
 
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, self::API_HOST . self::API_URL_GET_INSTALLMENTS);
+        curl_setopt($ch, CURLOPT_URL, $this->getApiUrl() . self::API_URL_GET_INSTALLMENTS);
         curl_setopt($ch, CURLOPT_POST, 1);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($params));
         curl_setopt($ch, CURLOPT_TIMEOUT, 45);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $this->getHeaders());
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $this->setHeaders());
 
         try {
             $response = curl_exec($ch);
@@ -316,9 +261,15 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
         }
     }
 
-    function getCidadeFromDdd($ddd)
+    /**
+     * Get State e City from Phone area code
+     * @param areaCode
+     * @return array
+     */
+
+    function getCityFromAreaCode($areaCode)
     {
-        switch ($ddd) {
+        switch ($areaCode) {
             case '68':
                 return ['uf' => 'AC', 'description' => 'Acre'];
                 break;
@@ -522,93 +473,6 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
                 break;
         }
     }
-    /**
-     * Returns session ID from PagSeguro that will be used on JavaScript methods.
-     * or FALSE on failure
-     * @return bool|string
-     */
-    public function getSessionId()
-    {
-        $url = $this->getWsUrl('sessions');
-        //@TODO Replace forbidden curl_*
-        $ch = curl_init($url);
-        $params['email'] = $this->getMerchantEmail();
-        $params['token'] = $this->getToken();
-        $params['public_key'] = $this->getPagSeguroPubKey();
-
-        if ($this->isSandbox()) {
-            $params['isSandbox'] = true;
-        }
-
-        //@TODO Replace curl
-        curl_setopt_array(
-            $ch,
-            [
-                CURLOPT_POSTFIELDS      => http_build_query($params),
-                CURLOPT_POST            => count($params),
-                CURLOPT_RETURNTRANSFER  => 1,
-                CURLOPT_TIMEOUT         => 45,
-                CURLOPT_SSL_VERIFYPEER  => false,
-                CURLOPT_SSL_VERIFYHOST  => false
-            ]
-        );
-
-        $response = null;
-
-        try {
-            $response = curl_exec($ch);
-        } catch (\Exception $e) {
-            return $e->getMessage();
-        }
-
-        libxml_use_internal_errors(true);
-
-        $this->authResponse = $response;
-        $xml = \simplexml_load_string($response);
-
-        if (false === $xml) {
-            //@TODO Remove curl
-            if (curl_errno($ch) > 0) {
-                $this->writeLog('PagSeguro API communication failure: ' . curl_error($ch));
-            } else {
-                $this->writeLog(
-                    'Authentication failed with PagSeguro API. Check registered email and token.
-                    Payback return: ' . $response
-                );
-            }
-            return false;
-        }
-
-        return (string)$xml->id;
-    }
-
-    public function getAuthResponse()
-    {
-        return $this->authResponse;
-    }
-
-    /**
-     * Pay on PagSeguro redirect method - check if should redirect to success page (true) or directly to PagSeguro (false)
-     * @return bool
-     */
-    public function isRedirectToSuccessPageEnabled()
-    {
-        return $this->scopeConfig->getValue(self::XML_PATH_PAYMENT_PAGSEGURO_REDIRECT_TO_SUCCESSPAGE, ScopeInterface::SCOPE_WEBSITE);
-    }
-
-    /**
-     * Return merchant e-mail setup on admin
-     * @return string
-     */
-    public function getMerchantEmail()
-    {
-        if ($this->isSandbox()) {
-            return $this->scopeConfig->getValue(self::XML_PATH_PAYMENT_PAGSEGURO_SANDBOX_EMAIL, ScopeInterface::SCOPE_WEBSITE);
-        }
-
-        //Production mode
-        return $this->scopeConfig->getValue(self::XML_PATH_PAYMENT_PAGSEGURO_EMAIL, ScopeInterface::SCOPE_WEBSITE);
-    }
 
     /**
      * Check if debug mode is active
@@ -620,33 +484,7 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
     }
 
     /**
-     * Get PagSeguro Public key (if exists)
-     * @return string
-     */
-    public function getPagSeguroPubKey()
-    {
-        if ($this->isSandbox()) {
-            return $this->scopeConfig->getValue(self::XML_PATH_PAYMENT_PAGSEGURO_SANDBOX_KEY, ScopeInterface::SCOPE_WEBSITE);
-        }
-
-        //Production mode
-        return $this->scopeConfig->getValue(self::XML_PATH_PAYMENT_PAGSEGURO_KEY, ScopeInterface::SCOPE_WEBSITE);
-    }
-
-    /**
-     * Checks if the updater is enabled
-     * @return bool
-     */
-    public function isUpdaterEnabled()
-    {
-        return (bool) $this->scopeConfig->getValue(
-            self::XML_PATH_PAYMENT_PAGSEGURO_ENABLE_UPDATER,
-            ScopeInterface::SCOPE_WEBSITE
-        );
-    }
-
-    /**
-     * Write something to pagseguro.log
+     * Write something to chez.log
      * @param $obj mixed|string
      */
     public function writeLog($obj)
@@ -657,8 +495,8 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
     }
 
     /**
-     * Get current. Return FALSE if empty.
-     * @return string | false
+     * Get API Token.
+     * @return string
      */
     public function getToken()
     {
@@ -672,46 +510,18 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
     }
 
     /**
-     * Return serialized (json) string with module configuration
-     * return string
+     * Get API URL.
+     * @return string
      */
-    public function getConfigJs()
+    public function getApiUrl()
     {
-        $activeMethods = [
-            'cc' => $this->scopeConfig->getValue(
-                self::XML_PATH_PAYMENT_PAGSEGURO_CC_ACTIVE,
-                ScopeInterface::SCOPE_STORE
-            ),
-            'twocc' => $this->scopeConfig->getValue(
-                self::XML_PATH_PAYMENT_PAGSEGURO_TWOCC_ACTIVE,
-                ScopeInterface::SCOPE_STORE
-            ),
-            'boleto' => $this->scopeConfig->getValue(
-                self::XML_PATH_PAYMENT_PAGSEGURO_BOLETO_ACTIVE,
-                ScopeInterface::SCOPE_STORE
-            ),
-            'tef' => $this->scopeConfig->getValue(
-                self::XML_PATH_PAYMENT_PAGSEGURO_TEF_ACTIVE,
-                ScopeInterface::SCOPE_STORE
-            )
-        ];
+        $api_url = $this->scopeConfig->getValue(self::API_URL, ScopeInterface::SCOPE_WEBSITE);
 
-        $config = [
-            'active_methods' => $activeMethods,
-            'flag' => $this->scopeConfig->getValue(
-                self::XML_PATH_PAYMENT_PAGSEGURO_CC_FLAG,
-                ScopeInterface::SCOPE_WEBSITE
-            ),
-            'debug' => $this->isDebugActive(),
-            'PagSeguroSessionId' => $this->getSessionId(),
-            'show_total' => $this->scopeConfig->getValue(
-                self::XML_PATH_PAYMENT_PAGSEGURO_CC_SHOW_TOTAL,
-                ScopeInterface::SCOPE_WEBSITE
-            ),
-            'force_installments_selection' => $this->forceInstallmentSelection()
-        ];
+        if (empty($api_url)) {
+            return false;
+        }
 
-        return json_encode($config);
+        return $api_url;
     }
 
     /**
@@ -731,94 +541,6 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
     {
         return  $this->checkoutSession->getQuote()->getGrandTotal();
     }
-
-    /**
-     * Get payment hashes (sender_hash & credit_card_token) from session
-     * @param string
-     * @return bool|string
-     */
-    public function getPaymentHash($payment, $param = null)
-    {
-        $psPayment = $payment->getAdditionalInformation();
-
-        if (empty($psPayment)) {
-            return false;
-        }
-
-        if ($param === null) {
-            return $psPayment;
-        }
-
-        if (isset($psPayment[$param])) {
-            return $psPayment[$param];
-        }
-
-        return false;
-    }
-
-
-    /**
-     * Check if CPF should be visible with other payment fields
-     * @return bool
-     */
-    public function isCpfVisible()
-    {
-        $customerCpfAttribute = $this->scopeConfig->getValue(
-            'payment/rm_pagseguro/customer_cpf_attribute',
-            ScopeInterface::SCOPE_WEBSITE
-        );
-        return empty($customerCpfAttribute);
-    }
-
-    /**
-     * Check if DOB should be visible with other payment fields
-     * @return bool
-     */
-    public function isDobVisible()
-    {
-        $customerDobAttribute = $this->scopeConfig->getValue(
-            'payment/rm_pagseguro_cc/owner_dob_attribute',
-            ScopeInterface::SCOPE_WEBSITE
-        );
-        return empty($customerDobAttribute);
-    }
-
-    /**
-     * Checks if the force installments selection flag is on
-     * @return bool
-     */
-    public function forceInstallmentSelection()
-    {
-        return (bool) $this->scopeConfig->getValue(
-            self::XML_PATH_PAYMENT_PAGSEGURO_CC_FORCE_INSTALLMENTS,
-            ScopeInterface::SCOPE_WEBSITE
-        );
-    }
-
-    /**
-     * Return Installment Qty
-     * @return int|null
-     */
-    public function getInstallmentQty()
-    {
-        $installmentsQty = null;
-
-        if (!$this->forceInstallmentSelection() && $this->checkoutSession->getData('installment')) {
-            $installmentsData = $this->serializer->unserialize($this->checkoutSession->getData('installment'));
-
-            if (isset($installmentsData['cc_installment']) && $installmentsData['cc_installment']) {
-                $installmentsData = explode('|', $installmentsData['cc_installment']);
-
-                if ($installmentsData && count($installmentsData) > 0) {
-                    $installmentsQty = (int) $installmentsData[0];
-                }
-            }
-        }
-
-        return $installmentsQty;
-    }
-
-
 
     /**
      * Convert array values to utf-8
@@ -850,107 +572,22 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
     }
 
     /**
-     * Returns associative array with required parameters to API, used on CC method calls
-     * @return array
-     */
-    public function getCreditCardApiCallParams(\Magento\Sales\Model\Order $order, $payment, $cc = '')
-    {
-        $reference = $order->getIncrementId();
-        $cardAmount = $order->getGrandTotal();
-        $percent = 1.0;
-
-        if (!empty($cc)) {
-            $cardAmount = floatval($payment->getAdditionalInformation('credit_card_amount' . $cc));
-            $percent = $cardAmount / $order->getGrandTotal();
-
-            if ($cc == '_first') {
-                $reference .= '-cc1';
-            } else {
-                $reference .= '-cc2';
-            }
-        }
-
-        $params = [
-            'email'             => $this->getMerchantEmail(),
-            'token'             => $this->getToken(),
-            'paymentMode'       => 'default',
-            'paymentMethod'     => 'creditCard',
-            'receiverEmail'     =>  $this->getMerchantEmail(),
-            'currency'          => 'BRL',
-            'creditCardToken'   => $payment->getAdditionalInformation('credit_card_token' . $cc),
-            'reference'         => $reference,
-            'extraAmount'       => $this->getExtraAmount($order, $percent),
-            'notificationURL'   => $this->getStoreUrl() . 'pseguro/notification/index',
-        ];
-
-        $params = array_merge($params, $this->getItemsParams($order, $percent));
-        $params = array_merge($params, $this->getSenderParams($order, $payment, $cc));
-        $params = array_merge($params, $this->getAddressParams($order, 'shipping', $percent));
-        $params = array_merge($params, $this->getAddressParams($order, 'billing'));
-        $params = array_merge($params, $this->getCreditCardHolderParams($order, $payment, $cc));
-        $params = array_merge($params, $this->getCreditCardInstallmentsParams($order, $payment, $cc));
-
-        if (!empty($cc)) {
-            $params = array_merge($params, $this->fixRoundErrors($order, $cardAmount, $params));
-        }
-
-        return $params;
-    }
-
-    /**
-     * Fixes possible erros on totals because of the percentual partioning of values
-     * between two cards
-     * @param \Magento\Sales\Model\Order $order
-     * @param float $cardAmount
-     * @param array $params
+     * Retrieves visible products of the order, omitting its children (yes, this is different than Magento's method)
+     * @param Magento\Sales\Model\Order $order
      *
      * @return array
      */
-    public function fixRoundErrors($order, $cardAmount, $params)
+    public function getAllVisibleItems($order)
     {
-        $itemsCalculatedTotal = 0;
-        $itemsCount = count($this->getAllVisibleItems($order));
-        for ($i = 1; $i <= $itemsCount; $i++) {
-            $itemsCalculatedTotal += $params['itemAmount' . $i] * $params['itemQuantity' . $i];
-        }
-
-        $calculatedShippingTotal = $params['shippingCost'];
-        $roundDiff = round($cardAmount - ($itemsCalculatedTotal + $calculatedShippingTotal), 2);
-
-        if ($roundDiff != 0 && $roundDiff != $params['extraAmount']) {
-            return ['extraAmount' => $roundDiff];
-        }
-
-        return [];
-    }
-
-    /**
-     * Calculates the "Extra" value that corresponds to Tax values minus Discount given
-     * It makes the correct discount to be shown correctly on PagSeguro
-     * @param Mage_Sales_Model_Order $order
-     *
-     * @return float
-     */
-    public function getExtraAmount($order, $percent = 1.0)
-    {
-        $discount = $order->getDiscountAmount() * $percent;
-        $taxAmount = $order->getTaxAmount() * $percent;
-        $extra = $discount + $taxAmount;
-
-        if ($this->shouldSplit($order)) {
-            $extra += 0.01;
-        }
-
-        //Discounting gift products
-        $orderItems = $this->getAllVisibleItems($order);
-        foreach ($orderItems as $item) {
-            if ($item->getPrice() == 0) {
-                $extra -= 0.01 * $item->getQtyOrdered();
+        $items = [];
+        foreach ($order->getItems() as $item) {
+            if (!$item->isDeleted() && !$item->getParentItem()) {
+                $items[] = $item;
             }
         }
-
-        return number_format($extra, 2, '.', '');
+        return $items;
     }
+
 
     /**
      * Return items information, to be send to API
@@ -958,287 +595,37 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
      * @param float $percent
      * @return array
      */
-    public function getItemsParams(\Magento\Sales\Model\Order $order, $percent = 1.0)
+    public function getItemsParams(\Magento\Sales\Model\Order $order)
     {
-        $return = [];
+        $products = [];
+
+        $shipping_amount = $order->getShippingAmount();
+        if (round($shipping_amount, 2) > 0) {
+            $product = new stdClass();
+            $product->title = 'Custos com envio';
+            $product->value = round($shipping_amount, 2);
+            $product->quantity = "1.6";
+            array_push($products, $product);
+        }
+
         $items = $this->getAllVisibleItems($order);
         if ($items) {
             $itemsCount = count($items);
             for ($x = 1, $y = 0; $x <= $itemsCount; $x++, $y++) {
-                $itemPrice = $items[$y]->getPrice() * $percent;
+                $itemPrice = $items[$y]->getPrice();
                 $qtyOrdered = $items[$y]->getQtyOrdered();
 
-                //We can't send 0.00 as value to PagSeguro. Will be discounted on extraAmount.
                 if ($itemPrice == 0) {
-                    $itemPrice = 0.01;
+                    continue;
                 }
-
-                $return['itemId' . $x] = $items[$y]->getId() ? $items[$y]->getId() : $items[$y]->getData('quote_item_id');
-                $return['itemDescription' . $x] = substr($items[$y]->getName(), 0, 100);
-                $return['itemAmount' . $x] = number_format($itemPrice, 2, '.', '');
-                $return['itemQuantity' . $x] = (int) $qtyOrdered;
-
-                if ($items[$y]->getIsQtyDecimal()) {
-                    $qtyDescription = ' (' . $items[$y]->getQtyOrdered() . ' un.)';
-
-                    $return['itemQuantity' . $x] = 1;
-                    $return['itemAmount' . $x] = number_format($items[$y]->getRowTotalInclTax() * $percent, 2, '.', '');
-                    $return['itemDescription' . $x] =
-                        substr($items[$y]->getName(), 0, 100 - strlen($qtyDescription)) .
-                        $qtyDescription;
-                }
+                $product = new stdClass();
+                $product->title = $items[$y]->getName();
+                $product->value = round($itemPrice, 2);
+                $product->quantity = $qtyOrdered;
+                array_push($products, $product);
             }
         }
-        return $return;
-    }
-
-    /**
-     * Return an array with Sender(Customer) information to be used on API call
-     *
-     * @param Magento\Sales\Model\Order $order
-     * @param $payment
-     * @param string $cc
-     * @return array
-     */
-    public function getSenderParams(\Magento\Sales\Model\Order $order, $payment, $cc = '')
-    {
-        $digits = new \Zend\Filter\Digits();
-        $cpf = $this->getCustomerCpfValue($order, $payment, $cc);
-
-        $phone = $this->extractPhone($order->getBillingAddress()->getTelephone());
-
-        $return = [
-            'senderName'    => $this->getSenderName($order),
-            'senderEmail'   => trim($order->getCustomerEmail()),
-            'senderHash'    => $this->getPaymentHash($payment, 'sender_hash'),
-            'senderCPF'     => $digits->filter($cpf),
-            'senderAreaCode' => $phone['area'],
-            'senderPhone'   => $phone['number'],
-        ];
-
-        if ($senderIp = $this->getSenderIp()) {
-            $return['senderIp'] = $senderIp;
-        }
-
-        if (strlen($return['senderCPF']) > 11) {
-            $return['senderCNPJ'] = $return['senderCPF'];
-            unset($return['senderCPF']);
-        }
-
-        if (empty($return['senderHash'])) {
-            unset($return['senderHash']);
-        }
-
-        return $return;
-    }
-
-    /**
-     * Returns an array with credit card's owner (Customer) to be used on API
-     * @param Magento\Sales\Model\Order $order
-     * @param $payment
-     * @param string $cc
-     * @return array
-     */
-    public function getCreditCardHolderParams(\Magento\Sales\Model\Order $order, $payment, $cc = '')
-    {
-        $digits = new \Zend\Filter\Digits();
-        $cpf = $this->getCustomerCpfValue($order, $payment, $cc);
-
-        //data
-        $customer = $this->customerRepo->load($order->getCustomerId());
-        $creditCardHolderBirthDate = $this->getCustomerCcDobValue($customer, $payment, $cc);
-        $phone = $this->extractPhone($order->getBillingAddress()->getTelephone());
-
-        $holderName = $this->removeDuplicatedSpaces($payment['additional_information']['credit_card_owner' . $cc]);
-        $return = [
-            'creditCardHolderName'      => $holderName,
-            'creditCardHolderBirthDate' => $creditCardHolderBirthDate,
-            'creditCardHolderCPF'       => $digits->filter($cpf),
-            'creditCardHolderAreaCode'  => $phone['area'],
-            'creditCardHolderPhone'     => $phone['number'],
-        ];
-
-        return $return;
-    }
-
-    /**
-     * Return an array with installment information to be used with API
-     * @param Magento\Sales\Model\Order $order
-     * @param Magento\Sales\Model\Order\Payment $payment
-     * @param string $cc
-     * @return array
-     */
-    public function getCreditCardInstallmentsParams(\Magento\Sales\Model\Order $order, $payment, $cc = '')
-    {
-        $return = [];
-        if (
-            $payment->getAdditionalInformation('installment_quantity' . $cc)
-            && $payment->getAdditionalInformation('installment_value' . $cc)
-        ) {
-            $return = [
-                'installmentQuantity'   => $payment->getAdditionalInformation('installment_quantity' . $cc),
-                'installmentValue'      => number_format(
-                    floatval(str_replace(",", ".", $payment->getAdditionalInformation('installment_value' . $cc))),
-                    2,
-                    '.',
-                    ''
-                ),
-            ];
-        } else {
-            $value = ($cc == '') ? $order->getGrandTotal() : $payment->getAdditionalInformation('credit_card_amount' . $cc);
-            $value = floatval($value);
-            $return = [
-                'installmentQuantity'   => '1',
-                'installmentValue'      => number_format($value, 2, '.', ''),
-            ];
-        }
-        return $return;
-    }
-
-    /**
-     * Return an array with address (shipping/billing) information to be used on API
-     * @param Magento\Sales\Model\Order $order
-     * @param string (billing|shipping) $type
-     * @param float $percent
-     * @return array
-     */
-    public function getAddressParams(\Magento\Sales\Model\Order $order, $type, $percent = 1.0)
-    {
-        $digits = new \Zend\Filter\Digits();
-
-        //address attributes
-        /** @var Mage_Sales_Model_Order_Address $address */
-        $address = ($type == 'shipping' && !$order->getIsVirtual()) ?
-            $order->getShippingAddress() : $order->getBillingAddress();
-        $addressStreetAttribute = $this->scopeConfig->getValue(
-            'payment/rm_pagseguro/address_street_attribute',
-            ScopeInterface::SCOPE_WEBSITE
-        );
-        $addressNumberAttribute = $this->scopeConfig->getValue(
-            'payment/rm_pagseguro/address_number_attribute',
-            ScopeInterface::SCOPE_WEBSITE
-        );
-        $addressComplementAttribute = $this->scopeConfig->getValue(
-            'payment/rm_pagseguro/address_complement_attribute',
-            ScopeInterface::SCOPE_WEBSITE
-        );
-        $addressNeighborhoodAttribute = $this->scopeConfig->getValue(
-            'payment/rm_pagseguro/address_neighborhood_attribute',
-            ScopeInterface::SCOPE_WEBSITE
-        );
-
-        //gathering address data
-        $addressStreet = $this->getAddressAttributeValue($address, $addressStreetAttribute);
-        $addressNumber = $this->getAddressAttributeValue($address, $addressNumberAttribute);
-        $addressComplement = $this->getAddressAttributeValue($address, $addressComplementAttribute);
-        $addressDistrict = $this->getAddressAttributeValue($address, $addressNeighborhoodAttribute);
-        $addressPostalCode = $digits->filter($address->getPostcode());
-        $addressCity = $address->getCity();
-        $addressState = $this->getStateCode($address->getRegion());
-
-        $return = [
-            $type . 'AddressStreet'     => substr($addressStreet, 0, 80),
-            $type . 'AddressNumber'     => substr($addressNumber, 0, 20),
-            $type . 'AddressComplement' => substr($addressComplement, 0, 40),
-            $type . 'AddressDistrict'   => substr($addressDistrict, 0, 60),
-            $type . 'AddressPostalCode' => $addressPostalCode,
-            $type . 'AddressCity'       => substr($addressCity, 0, 60),
-            $type . 'AddressState'      => $addressState,
-            $type . 'AddressCountry'    => 'BRA',
-        ];
-
-        //shipping specific
-        if ($type == 'shipping') {
-            $shippingType = $this->getShippingType($order);
-            $shippingCost = $order->getShippingAmount() * $percent;
-            $return['shippingType'] = $shippingType;
-
-            if ($shippingCost > 0) {
-                if ($this->shouldSplit($order)) {
-                    $shippingCost -= 0.01;
-                }
-
-                $return['shippingCost'] = number_format($shippingCost, 2, '.', '');
-            } else {
-                $return['shippingCost'] = '0.00';
-            }
-        }
-
-        return $return;
-    }
-
-    /**
-     * Returns customer's CPF based on your module configuration
-     * @param Mage_Sales_Model_Order $order
-     * @param Mage_Payment_Model_Method_Abstract $payment
-     * @param string $cc
-     *
-     * @return mixed
-     */
-    private function getCustomerCpfValue(\Magento\Sales\Model\Order $order, $payment, $cc = '')
-    {
-        $customerCpfAttribute = $this->scopeConfig->getValue(
-            'payment/rm_pagseguro/customer_cpf_attribute',
-            ScopeInterface::SCOPE_WEBSITE
-        );
-
-        if (empty($customerCpfAttribute)) { //Asked with payment data
-            if (isset($payment['additional_information'][$payment->getMethod() . '_cpf' . $cc])) {
-                return $payment['additional_information'][$payment->getMethod() . '_cpf' . $cc];
-            }
-        }
-        $entity = explode('|', $customerCpfAttribute);
-        $cpf = '';
-        if (count($entity) == 1 || $entity[0] == 'customer') {
-            if (count($entity) == 2) {
-                $customerCpfAttribute = $entity[1];
-            }
-            $customer = $order->getCustomer();
-
-            $cpf = $order->getData('customer_' . $customerCpfAttribute);
-        } elseif (count($entity) == 2 && $entity[0] == 'billing') { //billing
-            $cpf = $order->getShippingAddress()->getData($entity[1]);
-        }
-
-        if ($order->getCustomerIsGuest() && empty($cpf)) {
-            $cpf = $order->getData('customer_' . $customerCpfAttribute);
-        }
-
-        $cpfObj = new \Magento\Framework\DataObject(['cpf' => $cpf]);
-
-        return $cpfObj->getCpf();
-    }
-
-    /**
-     * Extracts phone area code and returns phone number, with area code as key of the returned array
-     * @author Ricardo Martins <ricardo@ricardomartins.net.br>
-     * @param string $phone
-     * @return array
-     */
-    private function extractPhone($phone)
-    {
-        $digits = new \Zend\Filter\Digits();
-        $phone = $digits->filter($phone);
-        //se começar com zero, pula o primeiro digito
-        if (substr($phone, 0, 1) == '0') {
-            $phone = substr($phone, 1, strlen($phone));
-        }
-        $originalPhone = $phone;
-
-        $phone = preg_replace('/^(\d{2})(\d{7,9})$/', '$1-$2', $phone);
-
-        if (is_array($phone) && count($phone) == 2) {
-            list($area, $number) = explode('-', $phone);
-            return [
-                'area' => $area,
-                'number' => $number
-            ];
-        }
-
-        return [
-            'area' => (string)substr($originalPhone, 0, 2),
-            'number' => (string)substr($originalPhone, 2, 9),
-        ];
+        return $products;
     }
 
     /**
@@ -1283,111 +670,6 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
     {
         json_decode($string);
         return (json_last_error() == JSON_ERROR_NONE);
-    }
-
-    /**
-     * Should split shipping? If grand total is equal to discount total.
-     * PagSeguro needs to receive product values > R$0,00, even if you need to invoice only shipping
-     * and would like to give producs for free.
-     * In these cases, splitting will add R$0,01 for each product, reducing R$0,01 from shipping total.
-     *
-     * @param $order
-     *
-     * @return bool
-     */
-    private function shouldSplit($order)
-    {
-        $discount = $order->getDiscountAmount();
-        $taxAmount = $order->getTaxAmount();
-        $extraAmount = $discount + $taxAmount;
-
-        $totalAmount = 0;
-        foreach ($this->getAllVisibleItems($order) as $item) {
-            $totalAmount += $item->getRowTotal();
-        }
-        return (abs($extraAmount) == $totalAmount);
-    }
-
-    /**
-     * Return shipping code based on PagSeguro Documentation
-     * 1 – PAC, 2 – SEDEX, 3 - Desconhecido
-     * @param \Magento\Sales\Model\Order $order
-     *
-     * @return string
-     */
-    private function getShippingType(\Magento\Sales\Model\Order $order)
-    {
-        $method =  strtolower($order->getShippingMethod());
-        if (strstr($method, 'pac') !== false) {
-            return '1';
-        } elseif (strstr($method, 'sedex') !== false) {
-            return '2';
-        }
-        return '3';
-    }
-
-    /**
-     * Gets the shipping attribute based on one of the id's from
-     * RicardoMartins_PagSeguro_Model_Source_Customer_Address_*
-     *
-     * @param \Magento\Sales\Model\Order\Address $address
-     * @param string $attributeId
-     *
-     * @return string
-     */
-    private function getAddressAttributeValue($address, $attributeId)
-    {
-        $isStreetline = preg_match('/^street_(\d{1})$/', $attributeId, $matches);
-
-        if ($isStreetline !== false && isset($matches[1])) { //uses streetlines
-            $street[1] = $address->getStreetLine(1); //street
-            $street[2] = $address->getStreetLine(2); //number
-            $street[3] = !$address->getStreetLine(4) ? '' : $address->getStreetLine(3); // complement
-            $street[4] = !$address->getStreetLine(4) ?
-                $address->getStreetLine(3) : $address->getStreetLine(4); //neighborhood
-            $lineNum = (int)$matches[1];
-            return $street[$lineNum];
-        } elseif ($attributeId == '') { //do not tell pagseguro
-            return '';
-        }
-        return (string)$address->getData($attributeId);
-    }
-
-    /**
-     * Returns customer's date of birthday, based on your module configuration or return a default date
-     * @param Magento\Customer\Model\Customer $customer
-     * @param                              $payment
-     * @param string $cc
-     *
-     * @return mixed
-     */
-    private function getCustomerCcDobValue(\Magento\Customer\Model\Customer $customer, $payment, $cc = '')
-    {
-        $ccDobAttribute = $this->scopeConfig->getValue(
-            'payment/rm_pagseguro_cc/owner_dob_attribute',
-            ScopeInterface::SCOPE_WEBSITE
-        );
-
-        if (empty($ccDobAttribute)) { //when asked with payment data
-            if (isset($payment['additional_information']['credit_card_owner_birthdate' . $cc])) {
-                return $payment['additional_information']['credit_card_owner_birthdate' . $cc];
-            }
-        }
-
-        //try to get from payment info
-        $dob = $payment->getOrder()->getData('customer_' . $ccDobAttribute);
-        if (!empty($dob)) {
-            return date('d/m/Y', strtotime($dob));
-        }
-
-        //try to get from customer
-        $attribute = $customer->getResource()->getAttribute($ccDobAttribute);
-        if (!$attribute) {
-            return '01/01/1970';
-        }
-        $dob = $attribute->getFrontend()->getValue($customer);
-
-        return date('d/m/Y', strtotime($dob));
     }
 
     /**
@@ -1454,24 +736,6 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
     }
 
     /**
-     * Returns Webservice URL based on selected environment (prod or sandbox)
-     *
-     * @param string $amend suffix
-     * @param bool $useApp uses app?
-     *
-     * @return string
-     */
-    public function getWsUrl($amend = '', $useApp = false)
-    {
-        if ($this->isSandbox()) {
-            return self::XML_PATH_PAYMENT_PAGSEGURO_SANDBOX_WS_URL . $amend;
-        }
-
-        //Production mode
-        return self::XML_PATH_PAYMENT_PAGSEGURO_WS_URL . $amend;
-    }
-
-    /**
      * Returns Store config value
      *
      * @param string
@@ -1494,375 +758,11 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
 
     public function getModuleInformation()
     {
-        return $this->moduleList->getOne('RicardoMartins_PagSeguro');
+        return $this->moduleList->getOne('Chez_Payments');
     }
 
     public function getMagentoVersion()
     {
         return $this->productMetadata->getVersion();
-    }
-
-    /**
-     * Validate public key
-     */
-    public function validateKey()
-    {
-        //@TODO Remove hardcoded url
-        $pubKey = $this->getPagSeguroPubKey();
-        if (empty($pubKey)) {
-            return 'Public Key is empty.';
-        }
-
-        $url = 'http://ws.ricardomartins.net.br/pspro/v7/auth/' . $pubKey;
-        if ($this->isSandbox()) {
-            $url .= '?isSandbox=1';
-        }
-        $this->_curl->get($url);
-
-        return $this->_curl->getBody();
-    }
-
-    public function getBoletoApiCallParams($order, $payment)
-    {
-        $params = [
-            'email' => $this->getMerchantEmail(),
-            'token' => $this->getToken(),
-            'paymentMode'   => 'default',
-            'paymentMethod' =>  'boleto',
-            'receiverEmail' =>  $this->getMerchantEmail(),
-            'currency'  => 'BRL',
-            'reference'     => $order->getIncrementId(),
-            'extraAmount' => $this->getExtraAmount($order),
-            'notificationURL' => $this->getStoreUrl() . 'pseguro/notification/index',
-        ];
-
-        $params = array_merge($params, $this->getItemsParams($order));
-        $params = array_merge($params, $this->getSenderParams($order, $payment));
-        $params = array_merge($params, $this->getAddressParams($order, 'shipping'));
-        $params = array_merge($params, $this->getAddressParams($order, 'billing'));
-
-        return $params;
-    }
-
-    public function getTefApiCallParams($order, $payment)
-    {
-        $params = $this->getBoletoApiCallParams($order, $payment);
-        $params['paymentMethod'] = 'eft';
-        $params['bankName'] = $payment['additional_information']['tef_bank'] ?? '';
-        return $params;
-    }
-
-    /**
-     * Translate dynamic words from PagSeguro errors and messages
-     * @author Ricardo Martins
-     * @return string
-     */
-    public function translateError()
-    {
-        $args = func_get_args();
-        $text = $args[0];
-        preg_match('/(.*)\:(.*)/', $text, $matches);
-        if ($matches !== false && isset($matches[1])) {
-            array_shift($matches);
-            $matches[0] .= ': %1';
-            $args = $matches;
-        }
-        return call_user_func_array('__', $args);
-    }
-
-    /**
-     * Sends the header details.
-     * @author Ricardo Martins
-     * @return Array
-     */
-    public function getHeaders()
-    {
-        $headers = [
-            'Platform: Magento',
-            'Content-Type: application/json',
-            //'Accept: application/json',
-            'Platform-Version: ' . $this->getMagentoVersion(),
-            'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2MWU5NjhiOGQ3MTEzYzAwMjA2OWJkMDEiLCJwZXJtaXNzaW9ucyI6W10sImlhdCI6MTY0NjQxNDI3OCwiZXhwIjoxNjQ2NDI4Njc4LCJhdWQiOiJtb2JpeHRlYy5jb20iLCJpc3MiOiJhY2NvdW50cy5tb2JpeHRlYy5jb20ifQ.5tuyUy0WGspIMTnmDmuETlNDE0bxvx2-TVCBbT1wPXU'
-        ];
-
-        return $headers;
-    }
-
-    /**
-     *  Returns associative array with required parameters to API, used on in redirect payment method
-     * @param $order
-     * @param $payment
-     *
-     * @return array
-     */
-    public function getRedirectParams($order, $payment)
-    {
-        $phone = $this->extractPhone($order->getBillingAddress()->getTelephone());
-
-        $enableRecover = $this->scopeConfig->getValue(
-            'payment/rm_pagseguro_pagar_no_pagseguro/enable_recovery',
-            ScopeInterface::SCOPE_STORE
-        ) ? 'true' : 'false';
-        $paymentAcceptedGroups = $this->scopeConfig->getValue(
-            'payment/rm_pagseguro_pagar_no_pagseguro/accepted_groups',
-            ScopeInterface::SCOPE_WEBSITE
-        );
-
-        $params = [
-            'email' => $this->getMerchantEmail(),
-            'paymentMethod' => 'redirect',
-            'currency' => 'BRL',
-            'reference' => $order->getIncrementId(),
-            'extraAmount' => $this->getExtraAmount($order),
-            'senderName' => $this->getSenderName($order),
-            'senderAreaCode' => $phone['area'],
-            'senderPhone' => $phone['number'],
-            'senderEmail' => trim($order->getCustomerEmail()),
-            'enableRecover' => $enableRecover,
-            'shippingAddressRequired' => '',
-            'acceptPaymentMethodGroup' => $paymentAcceptedGroups,
-            'notificationURL'   => $this->getStoreUrl() . 'pseguro/notification/index',
-        ];
-
-        $redirectURL = $this->scopeConfig->getValue(
-            'payment/rm_pagseguro_pagar_no_pagseguro/redirectURL',
-            ScopeInterface::SCOPE_STORE
-        );
-        if ($redirectURL) {
-            $params['redirectURL'] = $this->_urlBuilder->getUrl($redirectURL);
-        }
-
-        $params = array_merge($params, $this->getItemsParams($order));
-        $params = array_merge($params, $this->getAddressParams($order, 'shipping'));
-        $params = array_merge($params, $this->getAddressParams($order, 'billing'));
-
-        return $params;
-    }
-
-    /**
-     *  Returns Sender Name
-     * @param $order
-     *
-     * @return string
-     */
-    public function getSenderName($order)
-    {
-        if ($order->getCustomerIsGuest()) {
-            $senderName = $this->removeDuplicatedSpaces(sprintf(
-                '%s %s',
-                $order->getBillingAddress()->getFirstname(),
-                $order->getBillingAddress()->getLastname()
-            ));
-        } else {
-            $senderName = $this->removeDuplicatedSpaces(
-                sprintf('%s %s', $order->getCustomerFirstname(), $order->getCustomerLastname())
-            );
-        }
-
-        $senderName = substr($senderName, 0, 50);
-
-        return $senderName;
-    }
-
-    /**
-     * Retrieves visible products of the order, omitting its children (yes, this is different than Magento's method)
-     * @param Magento\Sales\Model\Order $order
-     *
-     * @return array
-     */
-    public function getAllVisibleItems($order)
-    {
-        $items = [];
-        foreach ($order->getItems() as $item) {
-            if (!$item->isDeleted() && !$item->getParentItem()) {
-                $items[] = $item;
-            }
-        }
-        return $items;
-    }
-
-    /**
-     * Check if Sandbox mode is active
-     * @return bool
-     */
-    public function isSandbox()
-    {
-        return $this->scopeConfig->getValue(self::XML_PATH_PAUMENT_PAGSEGURO_SANDBOX, ScopeInterface::SCOPE_WEBSITE);
-    }
-
-    /**
-     * Returns PagseguroDirectMethod JS URL based on selected environment (prod or sandbox)
-     *
-     * @return string
-     */
-    public function getJsUrl()
-    {
-        if ($this->isSandbox()) {
-            return self::XML_PATH_PAYMENT_PAGSEGURO_SANDBOX_JS_URL;
-        }
-
-        //Production mode
-        return self::XML_PATH_PAYMENT_PAGSEGURO_JS_URL;
-    }
-
-    public function getSenderIp()
-    {
-        $senderIp = $this->remoteAddress->getRemoteAddress();
-
-        if (isset($_SERVER['HTTP_CF_CONNECTING_IP'])) { //Cloudflare
-            $senderIp = $_SERVER['HTTP_CF_CONNECTING_IP'];
-        }
-        if (false === filter_var($senderIp, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4))
-            return false;
-
-        return $senderIp;
-    }
-
-    /**
-     * Calcel payments in orders with 2 credit cards (multi-cc orders)
-     * @param $payment
-     *
-     * @throws \Magento\Framework\Validator\Exception
-     */
-    public function twoCardCancel($payment)
-    {
-        $order = $payment->getOrder();
-
-        // sends the cancellation e-mail to the customer
-        if ($order->getState() == 'canceled') {
-            $this->orderCommentSender->send($order, true);
-        }
-
-        // iterates through the two cards transactions and cancels them
-        $transactionIds = [
-            $payment->getAdditionalInformation('transaction_id_first'),
-            $payment->getAdditionalInformation('transaction_id_second'),
-        ];
-
-        $errorMsg = [];
-
-        foreach ($transactionIds as $transactionId) {
-            try {
-                // checks the state of the transaction on pagseguro server
-                $transactionXml = $this->consultTransactionOnApi($transactionId);
-                $transactionStatus = (int) $transactionXml->status;
-
-                if (in_array($transactionStatus, [6, 7])) {
-                    $transactionType = \Magento\Sales\Model\Order\Payment\Transaction::TYPE_VOID;
-
-                    if ($transactionStatus == 6) {
-                        $transactionType = \Magento\Sales\Model\Order\Payment\Transaction::TYPE_REFUND;
-                    }
-
-                    $this->registerTransaction($transactionId, $transactionType, $payment);
-                    continue;
-                }
-
-                $apiEndpoint = 'transactions/cancels';
-                $params = ['transactionCode' => $transactionId];
-                $transactionType = \Magento\Sales\Model\Order\Payment\Transaction::TYPE_VOID;
-
-                // if the transaction is already paid,
-                // ajusts the endpoint and the parameters
-                if (in_array($transactionStatus, [3, 4, 5])) {
-                    $apiEndpoint = 'transactions/refunds';
-                    $params['token'] = $this->getToken();
-                    $params['email'] = $this->getMerchantEmail();
-                    $transactionType = \Magento\Sales\Model\Order\Payment\Transaction::TYPE_REFUND;
-                }
-
-                if ($this->callApi($params, $payment, $apiEndpoint) === null) {
-                    throw new LocalizedException(__('Cancellation request went wrong.'));
-                }
-
-                $this->registerTransaction($transactionId, $transactionType, $payment);
-            } catch (\Exception $e) {
-                $errorMsg[] = __(
-                    'Error trying to cancel Transaction %1 (Order %2): %3',
-                    $transactionId,
-                    $order->getIncrementId(),
-                    $e->getMessage()
-                );
-            }
-        }
-
-        if (count($errorMsg) > 0) {
-            throw new \Magento\Framework\Validator\Exception(__(implode("\n", $errorMsg)));
-        }
-    }
-
-    /**
-     * Consults the transaction on PagSeguro
-     *
-     * @param String $transactionId
-     *
-     * @return \SimpleXMLElement
-     * @throws LocalizedException
-     */
-    public function consultTransactionOnApi(String $transactionId): \SimpleXMLElement
-    {
-        $email = $this->getMerchantEmail();
-        $token = $this->getToken();
-        $url = "https://ws.pagseguro.uol.com.br/v2/transactions/{$transactionId}?email={$email}&token={$token}";
-
-        if ($this->isSandbox()) {
-            $publicKey = $this->getPagSeguroPubKey();
-            $url =
-                "https://ws.ricardomartins.net.br/pspro/v7/wspagseguro/v3/transactions/" .
-                "{$transactionId}?public_key={$publicKey}&isSandbox=1";
-        }
-
-        $this->httpClient->get($url);
-        $response = $this->httpClient->getBody();
-
-        if (!$response) {
-            throw new LocalizedException(__('Response is empty'));
-        }
-
-        libxml_use_internal_errors(true);
-        $responseXml = simplexml_load_string($response);
-
-        if (!$responseXml) {
-            throw new LocalizedException(__('Invalid response: %1', $response));
-        }
-
-        return $responseXml;
-    }
-
-    /**
-     * @param string $transactionId
-     * @param Payment $payment
-     * @return false|\Magento\Sales\Model\Order\Payment\Transaction
-     */
-    public function getTransaction($transactionId, $payment)
-    {
-        $transactionData = false;
-        try {
-            $transactionData = $this->transactionRepository->getByTransactionId($transactionId, $payment->getId(), $payment->getOrder()->getId());
-        } catch (\Magento\Framework\Exception\NoSuchEntityException $exception) {
-            throw new \Magento\Framework\Exception\LocalizedException($exception->getMessage());
-        }
-        return $transactionData;
-    }
-
-    /**
-     * Registers a transaction related to payment
-     * @param string $transactionId
-     * @param string $transactionType
-     * @param Payment $payment
-     */
-    public function registerTransaction($transactionId, $transactionType, $payment)
-    {
-        if ($this->getTransaction($transactionId . '-' . $transactionType, $payment)) {
-            return;
-        }
-
-        $payment->setTransactionId($transactionId . '-' . $transactionType);
-        $transaction = $payment->addTransaction(
-            $transactionType,
-            null,
-            true
-        );
-        $payment->save();
     }
 }

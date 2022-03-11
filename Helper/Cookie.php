@@ -9,8 +9,6 @@ use Magento\Framework\Stdlib\CookieManagerInterface;
 /**
  * Class Cookie - Quick cookie management class
  *
- * @author    Ricardo Martins <ricardo@magenteiro.com>
- * @copyright 2021 Magenteiro
  */
 class Cookie
 {

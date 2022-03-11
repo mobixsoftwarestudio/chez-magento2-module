@@ -18,46 +18,10 @@ use Magento\Framework\Pricing\PriceCurrencyInterface;
 
 class Service implements ServiceInterface
 {
-
     /**
      * @var \Psr\Log\LoggerInterface
      */
     private $logger;
-
-    /**
-     * @var ScopeConfigInterface
-     */
-    private $scopeConfig;
-
-    /**
-     * @var Registry
-     */
-    protected $registry;
-
-    /**
-     * @var PriceCurrencyInterface
-     */
-    protected $priceCurrency;
-
-    /**
-     * @var StoreManagerInterface
-     */
-    private $storeManager;
-
-    /**
-     * @var \Magento\Framework\UrlInterface
-     */
-    private $urlBuilder;
-
-    /**
-     * @var \Magento\Framework\Event\ManagerInterface
-     */
-    private $eventManager;
-
-    /**
-     * @var \Magento\Checkout\Model\Cart
-     */
-    private $cart;
 
     /**
      * @var \Magento\Checkout\Helper\Data
@@ -65,106 +29,17 @@ class Service implements ServiceInterface
     private $checkoutHelper;
 
     /**
-     * @var \Magento\Customer\Model\Session
-     */
-    private $customerSession;
-
-    /**
      * @var \Magento\Checkout\Model\Session
      */
     private $checkoutSession;
 
-    /**
-     * @var \StripeIntegration\Payments\Helper\ExpressHelper
-     */
-    private $expressHelper;
-
-    /**
-     * @var \StripeIntegration\Payments\Helper\Generic
-     */
-    private $paymentsHelper;
-
-    /**
-     * @var \StripeIntegration\Payments\Model\Config
-     */
     private $config;
-
-    /**
-     * @var \StripeIntegration\Payments\Model\StripeCustomer
-     */
-    private $stripeCustomer;
-
-    /**
-     * @var ServiceInputProcessor
-     */
-    private $inputProcessor;
-
-    /**
-     * @var \Magento\Quote\Api\Data\AddressInterface
-     */
-    private $estimatedAddressFactory;
-
-    /**
-     * @var \Magento\Quote\Api\ShippingMethodManagementInterface
-     */
-    private $shippingMethodManager;
-
-    /**
-     * @var \Magento\Checkout\Api\ShippingInformationManagementInterface
-     */
-    private $shippingInformationManagement;
-
-    /**
-     * @var ShippingInformationInterfaceFactory
-     */
-    private $shippingInformationFactory;
-
-    /**
-     * @var \Magento\Quote\Api\CartRepositoryInterface
-     */
-    private $quoteRepository;
-
-    /**
-     * @var CartManagementInterface
-     */
-    private $quoteManagement;
-
-    /**
-     * @var OrderSender
-     */
-    private $orderSender;
-
-    /**
-     * @var ProductRepositoryInterface
-     */
-    private $productRepository;
 
     private $chezHelper;
 
     /**
      * Service constructor.
      *
-     * @param \Psr\Log\LoggerInterface                                     $logger
-     * @param ScopeConfigInterface                                         $scopeConfig
-     * @param StoreManagerInterface                                        $storeManager
-     * @param \Magento\Framework\UrlInterface                              $urlBuilder
-     * @param \Magento\Framework\Event\ManagerInterface                    $eventManager
-     * @param \Magento\Checkout\Model\Cart                                 $cart
-     * @param \Magento\Checkout\Helper\Data                                $checkoutHelper
-     * @param \Magento\Customer\Model\Session                              $customerSession
-     * @param \Magento\Checkout\Model\Session                              $checkoutSession
-     * @param \StripeIntegration\Payments\Helper\ExpressHelper             $expressHelper
-     * @param \StripeIntegration\Payments\Helper\Generic                     $paymentsHelper
-     * @param \StripeIntegration\Payments\Model\Config                       $config
-     * @param ServiceInputProcessor                                        $inputProcessor
-     * @param \Magento\Quote\Api\Data\AddressInterfaceFactory              $estimatedAddressFactory
-     * @param \Magento\Quote\Api\ShippingMethodManagementInterface         $shippingMethodManager
-     * @param \Magento\Checkout\Api\ShippingInformationManagementInterface $shippingInformationManagement
-     * @param ShippingInformationInterfaceFactory                          $shippingInformationFactory
-     * @param \Magento\Quote\Api\CartRepositoryInterface                   $quoteRepository
-     * @param CartManagementInterface                                      $quoteManagement
-     * @param OrderSender                                                  $orderSender
-     * @param ProductRepositoryInterface                                   $productRepository
      */
     public function __construct(
         \Psr\Log\LoggerInterface $logger,

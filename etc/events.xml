@@ -10,9 +10,6 @@
     <event name="sales_order_place_after">
         <observer name="chez_payments_place_order_after" instance="Chez\Payments\Observer\OrderObserver" />
     </event>
-    <event name="sales_quote_collect_totals_before">
-        <observer name="chez_payments_sales_quote_collect_totals_before" instance="Chez\Payments\Observer\QuoteObserver"/>
-    </event>
     <event name="payment_method_is_active">
         <observer name="chez_payments_method_active" instance="Chez\Payments\Observer\PaymentMethodActiveObserver" />
     </event>

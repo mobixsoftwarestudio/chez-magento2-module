@@ -39,6 +39,7 @@ final class ConfigProvider implements ConfigProviderInterface
     public function getConfig()
     {
         $token = $this->helper->getToken();
+        $api_url = $this->helper->getApiUrl();
         return [
             'payment' => [
                 self::CODE => [
@@ -48,7 +49,7 @@ final class ConfigProvider implements ConfigProviderInterface
                         ClientMock::FAILURE => __('Fraud')
                     ],
                     'api_token' => $token,
-                    'api_url' => 'http://localhost:4001',
+                    'api_url' => $api_url,
                     'installments' => [
                         '1x' => __('1x Sem Juros'),
                         '2x' => __('2x Sem Juros'),

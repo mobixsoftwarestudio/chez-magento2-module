@@ -113,6 +113,11 @@ define(
                 };
             },
 
+            // selectPaymentMethod: function () {
+            //     this._super();
+            //     this.fetchInstallments(quote.totals().grand_total);
+            // },
+
             validate: function () {
                 //TODO: remover a linha abaixo e verificar porque a validação do CC está falhando
                 return true;
@@ -146,15 +151,9 @@ define(
             fetchInstallments: function (totals) {
                 let apiUrl = window.checkoutConfig.payment.chez_payments.api_url;
                 let apiToken = window.checkoutConfig.payment.chez_payments.api_token;
-                console.log('apiToken:' + apiToken);
-                console.log('getCode:' + this.getCode());
-                console.log('isChecked:' + this.isChecked());
-                console.log('this.grandTotal:' + this.grandTotal);
-                console.log('totals.grand_total:' + totals.grand_total);
                 if (apiToken.trim() != '' && this.getCode() == this.isChecked()) {
                     this.grandTotal = totals.grand_total;
                     const serviceUrl = urlBuilder.createUrl('/chez/payments/get_installments', {});
-                    console.log('serviceUrl: ' + serviceUrl);
 
                     const payload = {
                         total: this.grandTotal
@@ -167,18 +166,12 @@ define(
                             const selectInstallments = $('#chez_payments_cc_installments');
                             selectInstallments.empty();
                             const installments = response.success;
-                            console.log(installments);
                             for (const installment of installments) {
-                                selectInstallments.append('<option value="' + installment.key + '">' + installment.installmentDescription + ' juros </option>');
+                                selectInstallments.append('<option value="' + installment.key + '">' + installment.installmentDescription + ' </option>');
                             }
                         }
-
                     }).error(function (err) {
-                        self.stripeCreatingToken(false);
                         console.warn(err);
-
-                        // If for any reason we can't fetch the installment plans, just place the order
-                        self.placeOrderWithToken();
                     });
 
                 }
