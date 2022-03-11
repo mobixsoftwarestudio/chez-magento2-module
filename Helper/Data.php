@@ -79,9 +79,7 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
         $headers = [
             'Platform: Magento',
             'Content-Type: application/json',
-            //'Accept: application/json',
             'Platform-Version: ' . $this->getMagentoVersion(),
-            //'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2MWU5NjhiOGQ3MTEzYzAwMjA2OWJkMDEiLCJwZXJtaXNzaW9ucyI6W10sImlhdCI6MTY0NjQ4NDY1MCwiZXhwIjoxNjQ2NDk5MDUwLCJhdWQiOiJtb2JpeHRlYy5jb20iLCJpc3MiOiJhY2NvdW50cy5tb2JpeHRlYy5jb20ifQ.5J5ejal_y1d6ukXO2RA9rJSwDle1tK1iiLmyrM9mEB0'
         ];
 
         return $headers;
